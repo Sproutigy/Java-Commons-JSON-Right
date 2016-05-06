@@ -1,12 +1,19 @@
-# Java Commons JSON Right
+# Sproutigy Java Commons JSON Right
 Simplifies usage of JSON serialization format in JVM applications.
 
-Currently JSON Right uses **Jackson 2.x** library (which is required dependency).
+## json-right-jackson
 
+Currently JSON Right uses [Jackson 2](http://wiki.fasterxml.com/JacksonHome) library.
+Dependencies:
+- jackson-core
+- jackson-annotations
+- jackson-databind
 
-## Features
+Tested with Jackson version **2.7.4**.
 
-### String or parsed nodes tree
+### Features
+
+#### String or parsed nodes tree
 It does not matter how you want to keep your data. JSON Right dynamically converts between string and JsonNode object when there's a need:
 ```java
 String jsonStr = "{\"hello\":\"world\"}";
@@ -22,7 +29,7 @@ System.out.println(json.toStringPretty());
 ```
 
 
-### New JSON creation
+#### New JSON creation
 ```java
 JSON jsonObj = JSON.newObject();
 jsonObj.nodeObject().set("version", 1);
@@ -34,7 +41,7 @@ JSON jsonPrimitive = JSON.primitive(42);
 ```
 
 
-### Validation
+#### Validation
 JSON Right supports validation to boolean value:
 ```java
 boolean ok = json.isValid();
@@ -46,7 +53,7 @@ System.out.println(json.validate().node().get("hello"));
 ```
 
 
-### Serialization
+#### Serialization
 Serialization is possible using static method and deserialization using instance method:
 ```java
 MyClass myPOJO = ...;
@@ -55,7 +62,7 @@ MyClass deserializedPOJO = json.deserialize(MyClass.class);
 ```
 
 
-### Encoding detection
+#### Encoding detection
 When raw data (byte array) is specified as input, JSON Right will automatically detect charset used to encode JSON and convert to proper string:
 ```java
 String json = "{\"hello\":\"world\"}";
@@ -67,7 +74,7 @@ assert json == new JSON(json.getBytes("UTF-32LE")).toString();
 ```
 
 
-### Builder
+#### Builder
 JSON Right introduces it's own JSON builder with semantic interfaces that validates the state at compilation time as also helps in IDE to prevent invalid JSON creation from code:
 ```java
 String json = JSON.builder()
@@ -79,7 +86,7 @@ String json = JSON.builder()
 ```
 
 
-### Useful static constants
+#### Useful static constants
 ```java
 System.out.println(JSON.MIME_TYPE); // application/json
 System.out.println(JSON.DEFAULT_ENCODING); // UTF-8
@@ -89,7 +96,7 @@ byte[] data = "{\"hello\":\"world\"}".getBytes(JSON.DEFAULT_CHARSET);
 ```
 
 
-### Self-serialization
+#### Self-serialization
 JSON instance is self-serializable and may be safely used as a serializable object class field.
 ```java
 class MyClass {
@@ -101,7 +108,7 @@ class MyClass {
 ```
 
 
-### Jackson's ObjectMapper
+#### Jackson's ObjectMapper
 JSON uses it's own `ObjectMapper` singleton, which may be retrieved and used:
 ```java
 ObjectMapper objectMapper = JSON.getObjectMapper();
@@ -109,7 +116,7 @@ Integer num = objectMapper.convertValue("42", Integer.class);
 ```
 
 
-## Maven
+### Maven
 
 To use as a dependency add to your `pom.xml` into `<dependencies>` section:
 ```xml
@@ -119,3 +126,7 @@ To use as a dependency add to your `pom.xml` into `<dependencies>` section:
     <version>1.0-SNAPSHOT</version>
 </dependency>
 ```
+
+
+## More
+For more information and commercial support visit [Sproutigy](http://www.sproutigy.com/opensource)
