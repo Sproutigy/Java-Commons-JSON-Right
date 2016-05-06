@@ -13,7 +13,7 @@
 
     <properties>
         <targetJdk>1.6</targetJdk>
-        <jackson.version>[2.7.4,3.0.0)</jackson.version>
+        <jackson.version>2.7.4</jackson.version>
     </properties>
 
     <dependencies>
