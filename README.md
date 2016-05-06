@@ -66,11 +66,11 @@ MyClass deserializedPOJO = json.deserialize(MyClass.class);
 When raw data (byte array) is specified as input, JSON Right will automatically detect charset used to encode JSON and convert to proper string:
 ```java
 String json = "{\"hello\":\"world\"}";
-assert json == new JSON(json.getBytes("UTF-8")).toString();
-assert json == new JSON(json.getBytes("UTF-16BE")).toString();
-assert json == new JSON(json.getBytes("UTF-16LE")).toString();
-assert json == new JSON(json.getBytes("UTF-32BE")).toString();
-assert json == new JSON(json.getBytes("UTF-32LE")).toString();
+assert json.equals(new JSON(json.getBytes("UTF-8")).toString());
+assert json.equals(new JSON(json.getBytes("UTF-16BE")).toString());
+assert json.equals(new JSON(json.getBytes("UTF-16LE")).toString());
+assert json.equals(new JSON(json.getBytes("UTF-32BE")).toString());
+assert json.equals(new JSON(json.getBytes("UTF-32LE")).toString());
 ```
 
 
