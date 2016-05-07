@@ -51,7 +51,7 @@ public class JSONTest {
 
         String json1 = JSON.builder()
                 .startObject()
-                .field("hello", "world")
+                    .field("hello", "world")
                 .endObject()
                 .build().toString();
 
@@ -60,9 +60,9 @@ public class JSONTest {
 
         String json2 = JSON.builder()
                 .startArray()
-                .element(true)
+                    .value(true)
                 .startObject()
-                .field("x", 5)
+                    .field("x", 5)
                 .endObject()
                 .endArray()
                 .build().toString()
@@ -71,7 +71,7 @@ public class JSONTest {
         assertEquals("[true,{\"x\":5}]", json2);
 
 
-        String json3 = JSON.builder().element("OK").build().toString();
+        String json3 = JSON.builder().value("OK").build().toString();
 
         assertEquals("\"OK\"", json3);
     }

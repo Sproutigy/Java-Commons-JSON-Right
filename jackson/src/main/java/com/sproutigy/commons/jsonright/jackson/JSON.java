@@ -156,47 +156,47 @@ public final class JSON implements Cloneable {
         if (o == null)
             return newNull();
 
-        return new JSON(serializeToCompactString(o));
+        return new JSON(serializeToStringCompact(o));
     }
 
     public static JSON primitive(byte v) {
-        return JSON.builder().element(v).build();
+        return JSON.builder().value(v).build();
     }
 
     public static JSON primitive(short v) {
-        return JSON.builder().element(v).build();
+        return JSON.builder().value(v).build();
     }
 
     public static JSON primitive(int v) {
-        return JSON.builder().element(v).build();
+        return JSON.builder().value(v).build();
     }
 
     public static JSON primitive(long v) {
-        return JSON.builder().element(v).build();
+        return JSON.builder().value(v).build();
     }
 
     public static JSON primitive(float v) {
-        return JSON.builder().element(v).build();
+        return JSON.builder().value(v).build();
     }
 
     public static JSON primitive(double v) {
-        return JSON.builder().element(v).build();
+        return JSON.builder().value(v).build();
     }
 
     public static JSON primitive(BigInteger v) {
-        return JSON.builder().element(v).build();
+        return JSON.builder().value(v).build();
     }
 
     public static JSON primitive(BigDecimal v) {
-        return JSON.builder().element(v).build();
+        return JSON.builder().value(v).build();
     }
 
     public static JSON primitive(boolean v) {
-        return JSON.builder().element(v).build();
+        return JSON.builder().value(v).build();
     }
 
     public static JSON primitive(String v) {
-        return JSON.builder().element(v).build();
+        return JSON.builder().value(v).build();
     }
 
     public static BuilderRoot builder() {
@@ -215,7 +215,7 @@ public final class JSON implements Cloneable {
         return builder(Formatting.Pretty);
     }
 
-    public static String serializeToCompactString(Object o) {
+    public static String serializeToStringCompact(Object o) {
         if (o == null) {
             return null;
         }
@@ -227,7 +227,7 @@ public final class JSON implements Cloneable {
         }
     }
 
-    public static String serializeToPrettyString(Object o) {
+    public static String serializeToStringPretty(Object o) {
         if (o == null) {
             return null;
         }
@@ -323,14 +323,26 @@ public final class JSON implements Cloneable {
         return (ArrayNode) node;
     }
 
-    public void set(String json) {
+    public JSON set(String json) {
         this.node = null;
         this.str = json;
+        return this;
     }
 
-    public void set(JsonNode json) {
+    public JSON set(JsonNode json) {
         this.node = json;
         this.str = null;
+        return this;
+    }
+
+    public JSON set(JSON other) {
+        if (other.str != null) {
+            this.str = other.str;
+            this.strFormatting = other.strFormatting;
+        } else {
+            this.node = other.node;
+        }
+        return this;
     }
 
     public String toStringCompact() {
@@ -483,7 +495,7 @@ public final class JSON implements Cloneable {
 
 
     public interface BuilderObject<TParent> {
-        BuilderArray<BuilderObject<TParent>> fieldArray(String fieldName);
+        BuilderObject<TParent> fieldNull(String fieldName);
         BuilderObject<TParent> field(String fieldName, byte v);
         BuilderObject<TParent> field(String fieldName, short v);
         BuilderObject<TParent> field(String fieldName, int v);
@@ -493,25 +505,35 @@ public final class JSON implements Cloneable {
         BuilderObject<TParent> field(String fieldName, BigDecimal v);
         BuilderObject<TParent> field(String fieldName, String v);
         BuilderObject<TParent> field(String fieldName, boolean v);
-        BuilderObject<TParent> fieldSerialize(String fieldName, Object o);
+        BuilderObject<TParent> field(String fieldName, byte[] data);
+        BuilderObject<TParent> field(String fieldName, byte[] data, int offset, int length);
+        BuilderObject<TParent> field(String fieldName, Object o);
+        BuilderObject<TParent> field(String fieldName, TreeNode node);
+        BuilderObject<TParent> field(String fieldName, JSON json);
         BuilderObject<BuilderObject<TParent>> startObject(String fieldName);
+        BuilderArray<BuilderObject<TParent>> startArray(String fieldName);
         TParent endObject();
     }
 
     public interface BuilderArray<TParent> {
-        BuilderArray<TParent> elementNull();
-        BuilderArray<TParent> element(byte v);
-        BuilderArray<TParent> element(short v);
-        BuilderArray<TParent> element(int v);
-        BuilderArray<TParent> element(long v);
-        BuilderArray<TParent> element(float v);
-        BuilderArray<TParent> element(double v);
-        BuilderArray<TParent> element(BigInteger v);
-        BuilderArray<TParent> element(BigDecimal v);
-        BuilderArray<TParent> element(String v);
-        BuilderArray<TParent> element(boolean v);
-        BuilderArray<TParent> elementSerialize(Object o);
+        BuilderArray<TParent> valueNull();
+        BuilderArray<TParent> value(byte v);
+        BuilderArray<TParent> value(short v);
+        BuilderArray<TParent> value(int v);
+        BuilderArray<TParent> value(long v);
+        BuilderArray<TParent> value(float v);
+        BuilderArray<TParent> value(double v);
+        BuilderArray<TParent> value(BigInteger v);
+        BuilderArray<TParent> value(BigDecimal v);
+        BuilderArray<TParent> value(String v);
+        BuilderArray<TParent> value(boolean v);
+        BuilderArray<TParent> value(byte[] data);
+        BuilderArray<TParent> value(byte[] data, int offset, int length);
+        BuilderArray<TParent> value(TreeNode node);
+        BuilderArray<TParent> value(JSON json);
+        BuilderArray<TParent> value(Object o);
         BuilderObject<BuilderArray<TParent>> startObject();
+        BuilderArray<BuilderArray<TParent>> startArray();
         TParent endArray();
     }
 
@@ -522,21 +544,25 @@ public final class JSON implements Cloneable {
     public interface BuilderRoot {
         BuilderObject<BuilderTerminate> startObject();
         BuilderArray<BuilderTerminate> startArray();
-        BuilderTerminate elementNull();
-        BuilderTerminate element(byte v);
-        BuilderTerminate element(short v);
-        BuilderTerminate element(int v);
-        BuilderTerminate element(long v);
-        BuilderTerminate element(float v);
-        BuilderTerminate element(double v);
-        BuilderTerminate element(BigInteger v);
-        BuilderTerminate element(BigDecimal v);
-        BuilderTerminate element(String v);
-        BuilderTerminate element(boolean v);
-        BuilderTerminate elementSerialize(Object o);
+        BuilderTerminate valueNull();
+        BuilderTerminate value(byte v);
+        BuilderTerminate value(short v);
+        BuilderTerminate value(int v);
+        BuilderTerminate value(long v);
+        BuilderTerminate value(float v);
+        BuilderTerminate value(double v);
+        BuilderTerminate value(BigInteger v);
+        BuilderTerminate value(BigDecimal v);
+        BuilderTerminate value(String v);
+        BuilderTerminate value(boolean v);
+        BuilderTerminate value(byte[] data);
+        BuilderTerminate value(byte[] data, int offset, int length);
+        BuilderTerminate value(TreeNode node);
+        BuilderTerminate value(JSON json);
+        BuilderTerminate value(Object o);
     }
 
-    public static class Builder implements BuilderRoot, BuilderObject, BuilderArray, BuilderTerminate {
+    public static final class Builder implements BuilderRoot, BuilderObject, BuilderArray, BuilderTerminate {
 
         private ByteArrayOutputStream out = new ByteArrayOutputStream();
         private JsonGenerator generator = generator(out);
@@ -582,7 +608,7 @@ public final class JSON implements Cloneable {
             return this;
         }
 
-        public Builder fieldArray(String fieldName) {
+        public Builder startArray(String fieldName) {
             try {
                 generator.writeArrayFieldStart(fieldName);
             } catch (IOException e) {
@@ -594,6 +620,15 @@ public final class JSON implements Cloneable {
         public Builder endArray() {
             try {
                 generator.writeEndArray();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return this;
+        }
+
+        public Builder fieldNull(String fieldName) {
+            try {
+                generator.writeNullField(fieldName);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -690,16 +725,38 @@ public final class JSON implements Cloneable {
             return this;
         }
 
-        public Builder fieldSerialize(String fieldName, Object o) {
+        public BuilderObject field(String fieldName, byte[] data) {
             try {
-                generator.writeObjectField(fieldName, o);
+                generator.writeBinaryField(fieldName, data);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
             return this;
         }
 
-        @Override
+        public BuilderObject field(String fieldName, byte[] data, int offset, int length) {
+            try {
+                generator.writeFieldName(fieldName);
+                generator.writeBinary(data, offset, length);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return this;
+        }
+
+        public Builder field(String fieldName, Object o) {
+            try {
+                if (o == null) {
+                    generator.writeNullField(fieldName);
+                } else {
+                    generator.writeObjectField(fieldName, o);
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return this;
+        }
+
         public Builder startObject(String fieldName) {
             try {
                 generator.writeObjectFieldStart(fieldName);
@@ -712,50 +769,45 @@ public final class JSON implements Cloneable {
         public Builder field(String fieldName, TreeNode node) {
             try {
                 generator.writeFieldName(fieldName);
-                generator.writeTree(node);
+                if (node == null) {
+                    generator.writeNull();
+                } else {
+                    generator.writeTree(node);
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
             return this;
         }
 
-        public Builder fieldNull(String fieldName) {
+        public BuilderObject field(String fieldName, JSON json) {
             try {
-                generator.writeNullField(fieldName);
+                generator.writeFieldName(fieldName);
+                if (json == null) {
+                    generator.writeNull();
+                } else {
+                    if (json.node != null) {
+                        generator.writeTree(json.node);
+                    } else {
+                        generator.writeRaw(json.toString());
+                    }
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
             return this;
         }
 
-        public Builder element(byte v) {
+        public Builder valueNull() {
             try {
-                generator.writeNumber(v);
+                generator.writeNull();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
             return this;
         }
 
-        public Builder element(short v) {
-            try {
-                generator.writeNumber(v);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            return this;
-        }
-
-        public Builder element(int v) {
-            try {
-                generator.writeNumber(v);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            return this;
-        }
-
-        public Builder element(long v) {
+        public Builder value(byte v) {
             try {
                 generator.writeNumber(v);
             } catch (IOException e) {
@@ -764,7 +816,7 @@ public final class JSON implements Cloneable {
             return this;
         }
 
-        public Builder element(float v) {
+        public Builder value(short v) {
             try {
                 generator.writeNumber(v);
             } catch (IOException e) {
@@ -773,7 +825,7 @@ public final class JSON implements Cloneable {
             return this;
         }
 
-        public Builder element(double v) {
+        public Builder value(int v) {
             try {
                 generator.writeNumber(v);
             } catch (IOException e) {
@@ -782,7 +834,34 @@ public final class JSON implements Cloneable {
             return this;
         }
 
-        public Builder element(BigDecimal v) {
+        public Builder value(long v) {
+            try {
+                generator.writeNumber(v);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return this;
+        }
+
+        public Builder value(float v) {
+            try {
+                generator.writeNumber(v);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return this;
+        }
+
+        public Builder value(double v) {
+            try {
+                generator.writeNumber(v);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return this;
+        }
+
+        public Builder value(BigDecimal v) {
             try {
                 if (v == null) {
                     generator.writeNull();
@@ -795,7 +874,7 @@ public final class JSON implements Cloneable {
             return this;
         }
 
-        public Builder element(BigInteger v) {
+        public Builder value(BigInteger v) {
             try {
                 if (v == null) {
                     generator.writeNull();
@@ -808,7 +887,7 @@ public final class JSON implements Cloneable {
             return this;
         }
 
-        public Builder element(String v) {
+        public Builder value(String v) {
             try {
                 if (v == null) {
                     generator.writeNull();
@@ -821,7 +900,7 @@ public final class JSON implements Cloneable {
             return this;
         }
 
-        public Builder element(boolean v) {
+        public Builder value(boolean v) {
             try {
                 generator.writeBoolean(v);
             } catch (IOException e) {
@@ -830,16 +909,39 @@ public final class JSON implements Cloneable {
             return this;
         }
 
-        public Builder elementSerialize(Object o) {
+        public Builder value(byte[] data) {
             try {
-                generator.writeObject(o);
+                generator.writeBinary(data);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
             return this;
         }
 
-        public Builder element(TreeNode node) {
+        public Builder value(byte[] data, int offset, int length) {
+            try {
+                generator.writeBinary(data, offset, length);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return this;
+        }
+
+        public Builder value(Object o) {
+            try {
+                if (o == null) {
+                    generator.writeNull();
+                }
+                else {
+                    generator.writeObject(o);
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return this;
+        }
+
+        public Builder value(TreeNode node) {
             try {
                 generator.writeTree(node);
             } catch (IOException e) {
@@ -848,9 +950,17 @@ public final class JSON implements Cloneable {
             return this;
         }
 
-        public Builder elementNull() {
+        public Builder value(JSON json) {
             try {
-                generator.writeNull();
+                if (json == null) {
+                    generator.writeNull();
+                } else {
+                    if (json.node != null) {
+                        generator.writeTree(json.node);
+                    } else {
+                        generator.writeRaw(json.toString());
+                    }
+                }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

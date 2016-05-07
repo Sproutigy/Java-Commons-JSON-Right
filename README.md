@@ -80,6 +80,11 @@ JSON Right introduces it's own JSON builder with semantic interfaces that valida
 String json = JSON.builder()
     .startObject()
         .field("hello", "world")
+        .startArray("test")
+            .value(1)
+            .value("OK")
+            .value(true)
+        .endArray()
     .endObject()
     .build()
     .toString();
