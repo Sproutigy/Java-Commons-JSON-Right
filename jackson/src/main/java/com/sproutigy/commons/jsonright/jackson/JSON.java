@@ -854,7 +854,11 @@ public final class JSON implements Cloneable {
                     if (json.node != null) {
                         generator.writeTree(json.node);
                     } else {
-                        generator.writeRaw(json.toString());
+                        generator.writeRawValue(json.toString());
+
+                        if (this.formatting == Formatting.Pretty || this.formatting != json.strFormatting) {
+                            this.formatting = Formatting.Unknown;
+                        }
                     }
                 }
             } catch (IOException e) {
@@ -1023,7 +1027,7 @@ public final class JSON implements Cloneable {
                     if (json.node != null) {
                         generator.writeTree(json.node);
                     } else {
-                        generator.writeRaw(json.toString());
+                        generator.writeRawValue(json.toString());
                     }
                 }
             } catch (IOException e) {
@@ -1034,6 +1038,7 @@ public final class JSON implements Cloneable {
 
         public JSON build() {
             try {
+                generator.flush();
                 generator.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);

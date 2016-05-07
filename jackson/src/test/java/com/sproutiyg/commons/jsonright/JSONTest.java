@@ -77,6 +77,25 @@ public class JSONTest {
     }
 
     @Test
+    public void testBuildUsingOtherJSON() {
+        String json1str = "{\"hello\":\"world\"}";
+        JSON json1 = new JSON(json1str);
+
+        JSON json2 = JSON.builder().startObject().field("test", json1).endObject().build();
+        assertEquals("{\"test\":"+json1str+"}", json2.toString());
+
+        JSON json3 = JSON.builder().startArray().value("test").value(json1).endArray().build();
+        assertEquals("[\"test\","+json1str+"]", json3.toString());
+
+        JSON json4 = JSON.builder().startArray().value(json1).value("test").endArray().build();
+        assertEquals("["+json1str+",\"test\"]", json4.toString());
+
+        JSON json5 = JSON.builder().startObject().field("test", json1).field("check", true).endObject().build();
+        assertEquals("{\"test\":"+json1str+",\"check\":true}", json5.toString());
+
+    }
+
+    @Test
     public void testObjectMapper() {
         ObjectMapper objectMapper = JSON.getObjectMapper();
         Integer num = objectMapper.convertValue("42", Integer.class);
