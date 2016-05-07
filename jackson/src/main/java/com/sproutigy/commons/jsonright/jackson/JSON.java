@@ -324,23 +324,40 @@ public final class JSON implements Cloneable {
     }
 
     public JSON set(String json) {
-        this.node = null;
+        return set(json, Formatting.Unknown);
+    }
+
+    public JSON set(String json, Formatting formatting) {
+        clear();
+
         this.str = json;
+        this.strFormatting = formatting;
         return this;
     }
 
     public JSON set(JsonNode json) {
+        clear();
+
         this.node = json;
-        this.str = null;
         return this;
     }
 
     public JSON set(JSON other) {
+        return set(other, true);
+    }
+
+    public JSON set(JSON other, boolean deepCopy) {
+        clear();
+
         if (other.str != null) {
             this.str = other.str;
             this.strFormatting = other.strFormatting;
-        } else {
-            this.node = other.node;
+        } else if (other.node != null) {
+            if (deepCopy) {
+                this.node = other.node.deepCopy();
+            } else {
+                this.node = other.node;
+            }
         }
         return this;
     }
@@ -509,6 +526,20 @@ public final class JSON implements Cloneable {
         }
 
         return toStringPretty();
+    }
+
+    public String toString(Formatting formatting) {
+        if (formatting == null || formatting == Formatting.Unknown) {
+            return toString();
+        }
+        if (formatting == Formatting.Compact) {
+            return toStringCompact();
+        }
+        if (formatting == Formatting.Pretty) {
+            return toStringPretty();
+        }
+
+        throw new IllegalArgumentException("Unsupported formatting value");
     }
 
 
