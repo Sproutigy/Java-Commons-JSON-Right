@@ -82,4 +82,32 @@ public class JSONTest {
         Integer num = objectMapper.convertValue("42", Integer.class);
         assertEquals(42, num.intValue());
     }
+
+    @Test
+    public void testJSONTypeCheck() {
+        JSON jsonObj = new JSON(" {\"hello\":\"world\"} ");
+        assertTrue(jsonObj.isObject());
+        assertFalse(jsonObj.isArray());
+        assertFalse(jsonObj.isPrimitive());
+        assertFalse(jsonObj.isNull());
+
+        JSON jsonArr = new JSON(" [\"hello\",\"world\"] ");
+        assertFalse(jsonArr.isObject());
+        assertTrue(jsonArr.isArray());
+        assertFalse(jsonArr.isPrimitive());
+        assertFalse(jsonArr.isNull());
+
+        JSON jsonPrimitiveNum = new JSON(" 5 ");
+        assertFalse(jsonPrimitiveNum.isObject());
+        assertFalse(jsonPrimitiveNum.isArray());
+        assertTrue(jsonPrimitiveNum.isPrimitive());
+        assertFalse(jsonPrimitiveNum.isNull());
+
+        JSON jsonNull = new JSON(" null ");
+        assertFalse(jsonNull.isObject());
+        assertFalse(jsonNull.isArray());
+        assertFalse(jsonNull.isPrimitive());
+        assertTrue(jsonNull.isNull());
+
+    }
 }

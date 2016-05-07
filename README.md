@@ -49,6 +49,7 @@ boolean ok = json.isValid();
 
 or inline check that may throw `IllegalStateException`:
 ```
+boolean ok = json.validate().isObject();
 System.out.println(json.validate().node().get("hello"));
 ```
 

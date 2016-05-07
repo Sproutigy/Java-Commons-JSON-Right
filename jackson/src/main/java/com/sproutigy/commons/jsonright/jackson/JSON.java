@@ -46,7 +46,7 @@ public final class JSON implements Cloneable {
     }
 
     public JSON(String jsonString, Formatting formatting) {
-        this.str = jsonString;
+        this.str = jsonString.trim();
         this.strFormatting = formatting;
     }
 
@@ -91,7 +91,7 @@ public final class JSON implements Cloneable {
                 throw new IllegalArgumentException("Invalid JSON data");
             }
 
-            this.str = new String(data, offset, length, charset);
+            this.str = new String(data, offset, length, charset).trim();
             this.strFormatting = Formatting.Unknown;
         }
     }
@@ -416,7 +416,41 @@ public final class JSON implements Cloneable {
     }
 
     public boolean isNull() {
-        return (node == null && (str == null || str.isEmpty())) || (node != null && node.isNull());
+        return (node == null && (str == null || str.isEmpty() || str.equals("null"))) || (node != null && node.isNull());
+    }
+
+    public boolean isObject() {
+        if (node != null) {
+            return node.isObject();
+        }
+        else {
+            return str != null && str.length() > 0 && str.charAt(0) == '{';
+        }
+    }
+
+    public boolean isArray() {
+        if (node != null) {
+            return node.isArray();
+        }
+        else {
+            return str != null && str.length() > 0 && str.charAt(0) == '[';
+        }
+    }
+
+    public boolean isPrimitive() {
+        if (node != null) {
+            return !node.isArray() && !node.isObject() && !node.isNull();
+        }
+        else {
+            if (str != null && str.length() > 0) {
+                if (str.equals("null")) {
+                    return false;
+                }
+                char c = str.charAt(0);
+                return c != '{' && c != '[';
+            }
+            return false;
+        }
     }
 
     public JsonParser parse() throws IOException {
