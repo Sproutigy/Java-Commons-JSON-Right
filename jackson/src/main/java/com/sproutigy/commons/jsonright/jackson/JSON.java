@@ -512,6 +512,19 @@ public final class JSON implements Cloneable {
         return this;
     }
 
+    @Override
+    public boolean equals(Object other) {
+        if (other == null || !(other instanceof JSON)) {
+            return false;
+        }
+        return ((JSON) other).toStringCompact().equals(((JSON) other).toStringCompact());
+    }
+
+    @Override
+    public int hashCode() {
+        return toStringCompact().hashCode();
+    }
+
     public JSON clear() {
         str = null;
         strFormatting = null;
@@ -1042,6 +1055,7 @@ public final class JSON implements Cloneable {
             try {
                 generator.flush();
                 generator.close();
+                generator = null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -1065,6 +1079,17 @@ public final class JSON implements Cloneable {
                 builder.generator.writeRaw(jsonNode.toString());
                 return builder;
             }
+        }
+
+        @Override
+        public String toString() {
+            if (generator != null) {
+                try {
+                    generator.flush();
+                } catch (IOException ignore) { }
+            }
+
+            return new String(out.toByteArray(), DEFAULT_CHARSET);
         }
     }
 }
