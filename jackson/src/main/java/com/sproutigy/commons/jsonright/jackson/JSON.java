@@ -627,6 +627,8 @@ public final class JSON implements Cloneable {
         BuilderTerminate value(Object o);
     }
 
+    @JsonSerialize(using = Builder.Serializer.class)
+    @JsonDeserialize(using = Builder.Deserializer.class)
     public static final class Builder implements BuilderRoot, BuilderObject, BuilderArray, BuilderTerminate {
 
         private ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -1045,6 +1047,24 @@ public final class JSON implements Cloneable {
             }
 
             return new JSON(new String(out.toByteArray(), DEFAULT_CHARSET), formatting);
+        }
+
+
+        public static class Serializer extends JsonSerializer<Builder> {
+            @Override
+            public void serialize(Builder that, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
+                jsonGenerator.getCodec().writeTree(jsonGenerator, that.build().node());
+            }
+        }
+
+        public static class Deserializer extends JsonDeserializer<Builder> {
+            @Override
+            public Builder deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
+                JSON.Builder builder = new JSON.Builder();
+                JsonNode jsonNode = jsonParser.getCodec().readTree(jsonParser);
+                builder.generator.writeRaw(jsonNode.toString());
+                return builder;
+            }
         }
     }
 }

@@ -47,6 +47,15 @@ public class JSONTest {
     }
 
     @Test
+    public void testBuilderSerialization() {
+        JSON.Builder builder = new JSON.Builder().startObject().field("hello", "world").endObject();
+        String json = JSON.serializeToStringCompact(builder);
+        assertEquals("{\"hello\":\"world\"}", json);
+        builder = JSON.fromString(json).deserialize(JSON.Builder.class);
+        assertEquals("{\"hello\":\"world\"}", builder.build().toStringCompact());
+    }
+
+    @Test
     public void testBuilder() {
 
         String json1 = JSON.builder()
