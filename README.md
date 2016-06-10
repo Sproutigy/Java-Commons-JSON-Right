@@ -129,7 +129,7 @@ To use as a dependency add to your `pom.xml` into `<dependencies>` section:
 <dependency>
     <groupId>com.sproutigy.commons</groupId>
     <artifactId>json-right-jackson</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>RELEASE</version>
 </dependency>
 ```
 
