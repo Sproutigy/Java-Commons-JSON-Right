@@ -555,25 +555,34 @@ public final class JSON implements Serializable, Cloneable {
 
 
     private void writeObject(ObjectOutputStream stream) throws IOException {
-        //formatting mark
-        if (strFormatting == null) {
-            stream.writeByte(0);
-        } else {
-            stream.writeByte(strFormatting.ordinal());
+        int formattingOrdinal = Formatting.Unknown.ordinal();
+
+        String jsonString = str;
+        if (jsonString == null) {
+            formattingOrdinal = Formatting.Compact.ordinal();
+            jsonString = toStringCompact();
         }
+        else {
+            if (strFormatting != null) {
+                formattingOrdinal = strFormatting.ordinal();
+            }
+        }
+
+        //formatting mark
+        stream.writeByte((byte)formattingOrdinal);
+
         //JSON string
-        stream.writeUTF(toString());
+        stream.writeUTF(jsonString);
     }
 
-    private void readObject(ObjectInputStream stream) throws IOException,
-            ClassNotFoundException {
+    private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
         //formatting mark
         int ordinal = stream.readByte();
         this.strFormatting = Formatting.values()[ordinal];
+
         //JSON string
         this.str = stream.readUTF();
     }
-
 
 
     public static class Serializer extends JsonSerializer<JSON> {
