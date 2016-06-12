@@ -12,9 +12,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
@@ -22,7 +20,7 @@ import java.nio.charset.Charset;
 
 @JsonSerialize(using = JSON.Serializer.class)
 @JsonDeserialize(using = JSON.Deserializer.class)
-public final class JSON implements Cloneable {
+public final class JSON implements Serializable, Cloneable {
 
     public static final String MIME_TYPE = "application/json";
     public static final String DEFAULT_ENCODING = "UTF-8";
@@ -554,6 +552,28 @@ public final class JSON implements Cloneable {
 
         throw new IllegalArgumentException("Unsupported formatting value");
     }
+
+
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        //formatting mark
+        if (strFormatting == null) {
+            stream.writeByte(0);
+        } else {
+            stream.writeByte(strFormatting.ordinal());
+        }
+        //JSON string
+        stream.writeUTF(toString());
+    }
+
+    private void readObject(ObjectInputStream stream) throws IOException,
+            ClassNotFoundException {
+        //formatting mark
+        int ordinal = stream.readByte();
+        this.strFormatting = Formatting.values()[ordinal];
+        //JSON string
+        this.str = stream.readUTF();
+    }
+
 
 
     public static class Serializer extends JsonSerializer<JSON> {

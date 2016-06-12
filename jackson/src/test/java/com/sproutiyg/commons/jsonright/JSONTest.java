@@ -4,8 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sproutigy.commons.jsonright.jackson.JSON;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 
 import static org.junit.Assert.*;
 
@@ -44,6 +43,25 @@ public class JSONTest {
         assertEquals(jsonString, JSON.getObjectMapper().writeValueAsString(json));
         json = JSON.getObjectMapper().readValue(jsonString, JSON.class);
         assertEquals(jsonString, json.toString());
+    }
+
+    @Test
+    public void testJavaSerialization() throws IOException, ClassNotFoundException {
+        JSON src = new JSON();
+        src.nodeObject().put("v", 1);
+
+        //serialize
+        ByteArrayOutputStream serialized = new ByteArrayOutputStream();
+        ObjectOutputStream out = new ObjectOutputStream(serialized);
+        out.writeObject(src);
+
+        //deserialize
+        ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(serialized.toByteArray()));
+        JSON deserialized = (JSON) in.readObject();
+
+        //check
+        assertEquals("{\"v\":1}", deserialized.toStringCompact());
+        assertEquals(src, deserialized);
     }
 
     @Test
