@@ -9,7 +9,33 @@ Dependencies:
 - jackson-annotations
 - jackson-databind
 
-Tested with Jackson version **2.7.4**.
+### Jackson version
+Tested with Jackson version **2.8.1**. May work with other versions.
+
+If you want to use different version, add this to your POM:
+```
+    <properties>
+        <jackson.version>2.8.1</jackson.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+    </dependencies>
+```
 
 ### Features
 
