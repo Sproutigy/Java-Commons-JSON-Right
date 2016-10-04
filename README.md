@@ -148,6 +148,56 @@ Integer num = objectMapper.convertValue("42", Integer.class);
 ```
 
 
+#### ClassedJSON
+When there's a need to serialize any class and keep class name for later deserialization without class knowledge, ClassedJSON may be used as a decorator for any object.
+
+Assuming having class:
+```java
+    package test;
+
+    public class TestPOJO {
+        String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+```
+
+It can be serialized with class name information by:
+```java
+TestPOJO obj = new TestPOJO();
+obj.setName("John Doe");
+
+String json = ClassedJSON.serialize(obj).toString();
+```
+
+it will be serialized to JSON string representation:
+```
+{"test.TestPOJO":{"name":"John Doe"}}
+```
+
+To deserialize use:
+```java
+TestPOJO deserialized = ClassedJSON.deserialize(obj);
+```
+
+An instance of ClassedJSON may be used as an containing object:
+```java
+ClassedJSON x = new ClassedJSON(obj);
+String json = JSON.serialize(x).toString();
+```
+
+Class name could be read before Java object deserialization:
+```java
+String className = ClassedJSON.fetchClassName(json);
+```
+
+
 ### Maven
 
 To use as a dependency add to your `pom.xml` into `<dependencies>` section:

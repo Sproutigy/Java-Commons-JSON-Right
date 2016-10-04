@@ -2,6 +2,7 @@ package com.sproutiyg.commons.jsonright;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sproutigy.commons.jsonright.jackson.JSON;
+import com.sproutigy.commons.jsonright.jackson.ClassedJSON;
 import org.junit.Test;
 
 import java.io.*;
@@ -157,4 +158,72 @@ public class JSONTest {
         assertTrue(jsonNull.isNull());
 
     }
+
+    @Test
+    public void testClassed() {
+        TestPOJO pojo = new TestPOJO("hello");
+
+        String json = ClassedJSON.serialize(pojo).toString();
+        assertTrue(json.contains(TestPOJO.class.getName()));
+
+        String clazz = ClassedJSON.fetchClassName(json);
+        assertEquals(TestPOJO.class.getName(), clazz);
+
+        TestPOJO deserialized = ClassedJSON.deserialize(json);
+        assertEquals("hello", deserialized.getName());
+    }
+
+    @Test
+    public void testComplexObjectSerialization() {
+        Complex complex = new Complex();
+        complex.setMyClassedJSON(new ClassedJSON(new TestPOJO("hello")));
+        complex.setMyJSON(JSON.fromString("{\"x\":7}"));
+
+        String json = JSON.serialize(complex).toString();
+        Complex deserialized = new JSON(json).deserialize(Complex.class);
+        assertEquals(7, deserialized.getMyJSON().nodeObject().get("x").asInt());
+        TestPOJO deserializedPOJO = deserialized.getMyClassedJSON().get();
+        assertEquals("hello", deserializedPOJO.getName());
+    }
+
+    public static class TestPOJO {
+        String name;
+
+        public TestPOJO() { }
+
+        public TestPOJO(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+
+    public static class Complex {
+        private JSON myJSON;
+        private ClassedJSON myClassedJSON;
+
+        public JSON getMyJSON() {
+            return myJSON;
+        }
+
+        public void setMyJSON(JSON myJSON) {
+            this.myJSON = myJSON;
+        }
+
+        public ClassedJSON getMyClassedJSON() {
+            return myClassedJSON;
+        }
+
+        public void setMyClassedJSON(ClassedJSON myClassedJSON) {
+            this.myClassedJSON = myClassedJSON;
+        }
+    }
+
+
 }
