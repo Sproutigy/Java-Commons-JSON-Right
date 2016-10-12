@@ -406,7 +406,7 @@ public final class JSON implements Serializable, Cloneable {
         }
         if (node != null) {
             try {
-                getObjectMapper().readValue(node.traverse(), clazz);
+                return getObjectMapper().readValue(node.traverse(), clazz);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -427,7 +427,7 @@ public final class JSON implements Serializable, Cloneable {
         if (o == null) {
             return defaultValue;
         }
-        return null;
+        return o;
     }
 
     public boolean isNull() {
