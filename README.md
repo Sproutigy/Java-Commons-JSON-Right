@@ -10,12 +10,12 @@ Dependencies:
 - jackson-databind
 
 ### Jackson version
-Tested with Jackson version **2.8.3**, which is a default dependency. May work with other versions.
+Tested with Jackson version **2.8.6**, which is a default dependency. May work with other versions.
 
 If you want to use different version, add this to your POM:
 ```
     <properties>
-        <jackson.version>2.8.0</jackson.version>
+        <jackson.version>2.7.8</jackson.version>
     </properties>
 
     <dependencies>
