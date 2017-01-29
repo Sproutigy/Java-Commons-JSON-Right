@@ -9,7 +9,33 @@ Dependencies:
 - jackson-annotations
 - jackson-databind
 
-Tested with Jackson version **2.7.4**.
+### Jackson version
+Tested with Jackson version **2.8.6**, which is a default dependency. May work with other versions.
+
+If you want to use different version, add this to your POM:
+```
+    <properties>
+        <jackson.version>2.7.8</jackson.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+    </dependencies>
+```
 
 ### Features
 
@@ -119,6 +145,56 @@ JSON uses it's own `ObjectMapper` singleton, which may be retrieved and used:
 ```java
 ObjectMapper objectMapper = JSON.getObjectMapper();
 Integer num = objectMapper.convertValue("42", Integer.class);
+```
+
+
+#### ClassedJSON
+When there's a need to serialize any class and keep class name for later deserialization without class knowledge, ClassedJSON may be used as a decorator for any object.
+
+Assuming having class:
+```java
+    package test;
+
+    public class TestPOJO {
+        String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+```
+
+It can be serialized with class name information by:
+```java
+TestPOJO obj = new TestPOJO();
+obj.setName("John Doe");
+
+String json = ClassedJSON.serialize(obj).toString();
+```
+
+it will be serialized to JSON string representation:
+```
+{"test.TestPOJO":{"name":"John Doe"}}
+```
+
+To deserialize use:
+```java
+TestPOJO deserialized = ClassedJSON.deserialize(obj);
+```
+
+An instance of ClassedJSON may be used as an containing object:
+```java
+ClassedJSON x = new ClassedJSON(obj);
+String json = JSON.serialize(x).toString();
+```
+
+Class name could be read before Java object deserialization:
+```java
+String className = ClassedJSON.fetchClassName(json);
 ```
 
 

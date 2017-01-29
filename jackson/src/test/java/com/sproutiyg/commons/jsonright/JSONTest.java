@@ -1,11 +1,12 @@
 package com.sproutiyg.commons.jsonright;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.sproutigy.commons.jsonright.jackson.JSON;
+import com.sproutigy.commons.jsonright.jackson.ClassedJSON;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 
 import static org.junit.Assert.*;
 
@@ -44,6 +45,25 @@ public class JSONTest {
         assertEquals(jsonString, JSON.getObjectMapper().writeValueAsString(json));
         json = JSON.getObjectMapper().readValue(jsonString, JSON.class);
         assertEquals(jsonString, json.toString());
+    }
+
+    @Test
+    public void testJavaSerialization() throws IOException, ClassNotFoundException {
+        JSON src = new JSON();
+        src.nodeObject().put("v", 1);
+
+        //serialize
+        ByteArrayOutputStream serialized = new ByteArrayOutputStream();
+        ObjectOutputStream out = new ObjectOutputStream(serialized);
+        out.writeObject(src);
+
+        //deserialize
+        ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(serialized.toByteArray()));
+        JSON deserialized = (JSON) in.readObject();
+
+        //check
+        assertEquals("{\"v\":1}", deserialized.toStringCompact());
+        assertEquals(src, deserialized);
     }
 
     @Test
@@ -139,4 +159,80 @@ public class JSONTest {
         assertTrue(jsonNull.isNull());
 
     }
+
+    @Test
+    public void testClassed() {
+        TestPOJO pojo = new TestPOJO("hello");
+
+        String json = ClassedJSON.serialize(pojo).toString();
+        assertTrue(json.contains(TestPOJO.class.getName()));
+
+        String clazz = ClassedJSON.fetchClassName(json);
+        assertEquals(TestPOJO.class.getName(), clazz);
+
+        TestPOJO deserialized = ClassedJSON.deserialize(json);
+        assertEquals("hello", deserialized.getName());
+    }
+
+    @Test
+    public void testComplexObjectSerialization() {
+        Complex complex = new Complex();
+        complex.setMyClassedJSON(new ClassedJSON(new TestPOJO("hello")));
+        complex.setMyJSON(JSON.fromString("{\"x\":7}"));
+
+        String json = JSON.serialize(complex).toString();
+        Complex deserialized = new JSON(json).deserialize(Complex.class);
+        assertEquals(7, deserialized.getMyJSON().nodeObject().get("x").asInt());
+        TestPOJO deserializedPOJO = deserialized.getMyClassedJSON().get();
+        assertEquals("hello", deserializedPOJO.getName());
+    }
+
+    @Test
+    public void testDeserializeSimpleTypes() {
+        JSON json = JSON.builder().startObject().field("hello", "world").field("counter", 1).endObject().build();
+        TextNode textNode = (TextNode)json.nodeObject().get("hello");
+        assertEquals("world", JSON.fromNode(textNode).deserialize(String.class));
+        assertEquals(1, (int)JSON.fromNode(json.nodeObject().get("counter")).deserialize(Integer.class));
+    }
+
+    public static class TestPOJO {
+        String name;
+
+        public TestPOJO() { }
+
+        public TestPOJO(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+
+    public static class Complex {
+        private JSON myJSON;
+        private ClassedJSON myClassedJSON;
+
+        public JSON getMyJSON() {
+            return myJSON;
+        }
+
+        public void setMyJSON(JSON myJSON) {
+            this.myJSON = myJSON;
+        }
+
+        public ClassedJSON getMyClassedJSON() {
+            return myClassedJSON;
+        }
+
+        public void setMyClassedJSON(ClassedJSON myClassedJSON) {
+            this.myClassedJSON = myClassedJSON;
+        }
+    }
+
+
 }

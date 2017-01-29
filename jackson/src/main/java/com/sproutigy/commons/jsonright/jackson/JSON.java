@@ -12,9 +12,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
@@ -22,7 +20,7 @@ import java.nio.charset.Charset;
 
 @JsonSerialize(using = JSON.Serializer.class)
 @JsonDeserialize(using = JSON.Deserializer.class)
-public final class JSON implements Cloneable {
+public final class JSON implements Serializable, Cloneable {
 
     public static final String MIME_TYPE = "application/json";
     public static final String DEFAULT_ENCODING = "UTF-8";
@@ -408,7 +406,7 @@ public final class JSON implements Cloneable {
         }
         if (node != null) {
             try {
-                getObjectMapper().readValue(node.traverse(), clazz);
+                return getObjectMapper().readValue(node.traverse(), clazz);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -429,7 +427,7 @@ public final class JSON implements Cloneable {
         if (o == null) {
             return defaultValue;
         }
-        return null;
+        return o;
     }
 
     public boolean isNull() {
@@ -553,6 +551,37 @@ public final class JSON implements Cloneable {
         }
 
         throw new IllegalArgumentException("Unsupported formatting value");
+    }
+
+
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        int formattingOrdinal = Formatting.Unknown.ordinal();
+
+        String jsonString = str;
+        if (jsonString == null) {
+            formattingOrdinal = Formatting.Compact.ordinal();
+            jsonString = toStringCompact();
+        }
+        else {
+            if (strFormatting != null) {
+                formattingOrdinal = strFormatting.ordinal();
+            }
+        }
+
+        //formatting mark
+        stream.writeByte((byte)formattingOrdinal);
+
+        //JSON string
+        stream.writeUTF(jsonString);
+    }
+
+    private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
+        //formatting mark
+        int ordinal = stream.readByte();
+        this.strFormatting = Formatting.values()[ordinal];
+
+        //JSON string
+        this.str = stream.readUTF();
     }
 
 
