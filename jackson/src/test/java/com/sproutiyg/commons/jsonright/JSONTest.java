@@ -1,6 +1,7 @@
 package com.sproutiyg.commons.jsonright;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.sproutigy.commons.jsonright.jackson.JSON;
 import com.sproutigy.commons.jsonright.jackson.ClassedJSON;
 import org.junit.Test;
@@ -184,6 +185,14 @@ public class JSONTest {
         assertEquals(7, deserialized.getMyJSON().nodeObject().get("x").asInt());
         TestPOJO deserializedPOJO = deserialized.getMyClassedJSON().get();
         assertEquals("hello", deserializedPOJO.getName());
+    }
+
+    @Test
+    public void testDeserializeSimpleTypes() {
+        JSON json = JSON.builder().startObject().field("hello", "world").field("counter", 1).endObject().build();
+        TextNode textNode = (TextNode)json.nodeObject().get("hello");
+        assertEquals("world", JSON.fromNode(textNode).deserialize(String.class));
+        assertEquals(1, (int)JSON.fromNode(json.nodeObject().get("counter")).deserialize(Integer.class));
     }
 
     public static class TestPOJO {
