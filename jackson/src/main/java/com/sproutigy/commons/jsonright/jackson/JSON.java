@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.util.RawValue;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -25,15 +26,21 @@ public final class JSON implements Serializable, Cloneable {
     public static final String MIME_TYPE = "application/json";
     public static final String DEFAULT_ENCODING = "UTF-8";
     public static final Charset DEFAULT_CHARSET = Charset.forName(DEFAULT_ENCODING);
-    public static final String CONTENT_TYPE_WITH_DEFAULT_ENCODING = MIME_TYPE + "; charset="+DEFAULT_ENCODING.toLowerCase();
+    public static final String CONTENT_TYPE_WITH_DEFAULT_ENCODING = MIME_TYPE + "; charset=" + DEFAULT_ENCODING.toLowerCase();
 
-    private static ObjectMapper objectMapper = null;
+    private static ObjectMapper DEFAULT_OBJECT_MAPPER = null;
+
+    private ObjectMapper localObjectMapper;
     private String str;
     private Formatting strFormatting = null;
     private transient JsonNode node;
 
     public enum Formatting {
         Unknown, Compact, Pretty
+    }
+
+    public enum StorageType {
+        Unknown, String, NodeTree
     }
 
     public JSON() {
@@ -62,18 +69,17 @@ public final class JSON implements Serializable, Cloneable {
 
             if (data[offset] == 0) {
                 if (data.length >= 4) {
-                    if (data[offset+1] == 0 && data[offset+2] == 0 && data[offset+3] != 0) {
+                    if (data[offset + 1] == 0 && data[offset + 2] == 0 && data[offset + 3] != 0) {
                         charset = Charset.forName("UTF-32BE");
                     } else {
                         charset = Charset.forName("UTF-16BE");
                     }
                 }
-            }
-            else {
+            } else {
                 if (data.length > 1) {
-                    if (data[offset+1] == 0) {
+                    if (data[offset + 1] == 0) {
                         if (data.length >= 4) {
-                            if (data[offset+2] == 0 && data[offset+3] == 0) {
+                            if (data[offset + 2] == 0 && data[offset + 3] == 0) {
                                 charset = Charset.forName("UTF-32LE");
                             } else {
                                 charset = Charset.forName("UTF-16LE");
@@ -94,18 +100,35 @@ public final class JSON implements Serializable, Cloneable {
         }
     }
 
-    public static ObjectMapper getObjectMapper() {
-        if (objectMapper == null) {
+    public static ObjectMapper getDefaultObjectMapper() {
+        if (DEFAULT_OBJECT_MAPPER == null) {
             synchronized (JSON.class) {
-                if (objectMapper == null) {
-                    objectMapper = new ObjectMapper();
-                    objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-                    objectMapper.setDefaultPrettyPrinter(null);
-                    objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-                    objectMapper.enable(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY);
-                    objectMapper.disable(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES);
+                if (DEFAULT_OBJECT_MAPPER == null) {
+                    DEFAULT_OBJECT_MAPPER = new ObjectMapper();
+                    DEFAULT_OBJECT_MAPPER.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+                    DEFAULT_OBJECT_MAPPER.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+                    DEFAULT_OBJECT_MAPPER.enable(DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY);
+                    DEFAULT_OBJECT_MAPPER.disable(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES);
+                    DEFAULT_OBJECT_MAPPER.getFactory().setCodec(DEFAULT_OBJECT_MAPPER);
                 }
             }
+        }
+        return DEFAULT_OBJECT_MAPPER;
+    }
+
+    public ObjectMapper getLocalObjectMapper() {
+        return localObjectMapper;
+    }
+
+    public JSON setLocalObjectMapper(ObjectMapper localObjectMapper) {
+        this.localObjectMapper = localObjectMapper;
+        return this;
+    }
+
+    public ObjectMapper getObjectMapper() {
+        ObjectMapper objectMapper = localObjectMapper;
+        if (objectMapper == null) {
+            objectMapper = getDefaultObjectMapper();
         }
         return objectMapper;
     }
@@ -119,18 +142,18 @@ public final class JSON implements Serializable, Cloneable {
     }
 
     public static JSON newNull() {
-        return new JSON(NullNode.getInstance());
+        return new JSON(nullNode());
     }
 
     public static ObjectNode newObjectNode() {
-        return getObjectMapper().createObjectNode();
+        return getDefaultObjectMapper().createObjectNode();
     }
 
     public static ArrayNode newArrayNode() {
-        return getObjectMapper().createArrayNode();
+        return getDefaultObjectMapper().createArrayNode();
     }
 
-    public static JsonNode newNullNode() {
+    public static JsonNode nullNode() {
         return NullNode.getInstance();
     }
 
@@ -205,6 +228,14 @@ public final class JSON implements Serializable, Cloneable {
         return new Builder(formatting);
     }
 
+    public static BuilderRoot builder(ObjectMapper objectMapper) {
+        return new Builder(objectMapper, Formatting.Compact);
+    }
+
+    public static BuilderRoot builder(ObjectMapper objectMapper, Formatting formatting) {
+        return new Builder(objectMapper, formatting);
+    }
+
     public static BuilderRoot builderCompact() {
         return builder(Formatting.Compact);
     }
@@ -215,11 +246,11 @@ public final class JSON implements Serializable, Cloneable {
 
     public static String serializeToStringCompact(Object o) {
         if (o == null) {
-            return null;
+            return "null";
         }
 
         try {
-            return getObjectMapper().writeValueAsString(o);
+            return getDefaultObjectMapper().writeValueAsString(o);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -227,32 +258,48 @@ public final class JSON implements Serializable, Cloneable {
 
     public static String serializeToStringPretty(Object o) {
         if (o == null) {
-            return null;
+            return "null";
         }
 
         try {
-            return getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(o);
+            return getDefaultObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(o);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
 
+    public static JsonNode serializeToNode(Object o) {
+        if (o == null) {
+            return nullNode();
+        }
+        return getDefaultObjectMapper().valueToTree(o);
+    }
+
     public static JsonGenerator generator(OutputStream out) {
+        return generator(getDefaultObjectMapper(), out);
+    }
+
+    public static JsonGenerator generator(ObjectMapper objectMapper, OutputStream out) {
         try {
-            return getObjectMapper().getFactory().createGenerator(out, JsonEncoding.UTF8);
+            return objectMapper.getFactory().createGenerator(out, JsonEncoding.UTF8);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     public static JsonGenerator generatorPretty(OutputStream out) {
-        return generator(out).setPrettyPrinter(new DefaultPrettyPrinter());
+        return generator(getDefaultObjectMapper(), out);
+    }
+
+    public static JsonGenerator generatorPretty(ObjectMapper objectMapper, OutputStream out) {
+        return generator(objectMapper, out).setPrettyPrinter(new DefaultPrettyPrinter());
     }
 
     public static String compactString(String jsonString) {
         try {
-            JsonNode jsonNode = getObjectMapper().readTree(jsonString);
-            return getObjectMapper().writeValueAsString(jsonNode);
+            ObjectMapper objectMapper = getDefaultObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(jsonString);
+            return objectMapper.writeValueAsString(jsonNode);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -260,19 +307,24 @@ public final class JSON implements Serializable, Cloneable {
 
     public static String prettyString(String jsonString) {
         try {
-            JsonNode jsonNode = getObjectMapper().readTree(jsonString);
-            return getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode);
+            ObjectMapper objectMapper = getDefaultObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(jsonString);
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public JSON jsonize(Object o) {
+        set(getObjectMapper().convertValue(o, JsonNode.class));
+        return this;
     }
 
     @Override
     protected Object clone() throws CloneNotSupportedException {
         if (str != null) {
             return new JSON(str);
-        }
-        else {
+        } else {
             return new JSON(toStringCompact());
         }
     }
@@ -281,9 +333,9 @@ public final class JSON implements Serializable, Cloneable {
         if (node == null) {
             if (str != null && !str.isEmpty()) {
                 if (str.equals("{}")) {
-                    node = newObjectNode();
+                    node = getObjectMapper().createObjectNode();
                 } else if (str.equals("[]")) {
-                    node = newArrayNode();
+                    node = getObjectMapper().createArrayNode();
                 } else {
                     try {
                         node = getObjectMapper().readTree(str);
@@ -292,7 +344,7 @@ public final class JSON implements Serializable, Cloneable {
                     }
                 }
             } else {
-                node = newNullNode();
+                node = nullNode();
             }
             str = null;
         }
@@ -319,6 +371,33 @@ public final class JSON implements Serializable, Cloneable {
             }
         }
         return (ArrayNode) node;
+    }
+
+    public StorageType getCurrentStorageType() {
+        if (str != null) {
+            return StorageType.String;
+        }
+        if (node != null) {
+            return StorageType.NodeTree;
+        }
+
+        return StorageType.Unknown;
+    }
+
+    public void appendTo(ObjectNode objectNode, String fieldName) {
+        if (getCurrentStorageType() == StorageType.String) {
+            objectNode.putRawValue(fieldName, new RawValue(toString()));
+        } else {
+            objectNode.set(fieldName, node());
+        }
+    }
+
+    public void appendTo(ArrayNode arrayNode) {
+        if (getCurrentStorageType() == StorageType.String) {
+            arrayNode.addRawValue(new RawValue(toString()));
+        } else {
+            arrayNode.add(node());
+        }
     }
 
     public JSON set(String json) {
@@ -380,7 +459,6 @@ public final class JSON implements Serializable, Cloneable {
         if (str != null && strFormatting == Formatting.Pretty) {
             return str;
         }
-
         try {
             return getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(node());
         } catch (JsonProcessingException e) {
@@ -399,14 +477,14 @@ public final class JSON implements Serializable, Cloneable {
 
         if (str != null) {
             try {
-                return getObjectMapper().readValue(str, clazz);
+                return getObjectMapper().readValue(parse(), clazz);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
         if (node != null) {
             try {
-                return getObjectMapper().readValue(node.traverse(), clazz);
+                return getObjectMapper().treeToValue(node, clazz);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -437,8 +515,7 @@ public final class JSON implements Serializable, Cloneable {
     public boolean isObject() {
         if (node != null) {
             return node.isObject();
-        }
-        else {
+        } else {
             return str != null && str.length() > 0 && str.charAt(0) == '{';
         }
     }
@@ -446,8 +523,7 @@ public final class JSON implements Serializable, Cloneable {
     public boolean isArray() {
         if (node != null) {
             return node.isArray();
-        }
-        else {
+        } else {
             return str != null && str.length() > 0 && str.charAt(0) == '[';
         }
     }
@@ -455,8 +531,7 @@ public final class JSON implements Serializable, Cloneable {
     public boolean isPrimitive() {
         if (node != null) {
             return !node.isArray() && !node.isObject() && !node.isNull();
-        }
-        else {
+        } else {
             if (str != null && str.length() > 0) {
                 if (str.equals("null")) {
                     return false;
@@ -473,7 +548,10 @@ public final class JSON implements Serializable, Cloneable {
         if (json == null) {
             json = toStringCompact();
         }
-        return getObjectMapper().getFactory().createParser(json);
+
+        JsonParser parser = getObjectMapper().getFactory().createParser(json);
+        parser.setCodec(getObjectMapper());
+        return parser;
     }
 
     public boolean isValid() {
@@ -497,7 +575,7 @@ public final class JSON implements Serializable, Cloneable {
             try {
                 node();
                 return true;
-            } catch(Exception e) {
+            } catch (Exception e) {
                 return false;
             }
         }
@@ -505,7 +583,7 @@ public final class JSON implements Serializable, Cloneable {
 
     public JSON validate() {
         if (!isValid()) {
-           throw new IllegalStateException("Provided JSON is invalid");
+            throw new IllegalStateException("Provided JSON is invalid");
         }
         return this;
     }
@@ -561,15 +639,14 @@ public final class JSON implements Serializable, Cloneable {
         if (jsonString == null) {
             formattingOrdinal = Formatting.Compact.ordinal();
             jsonString = toStringCompact();
-        }
-        else {
+        } else {
             if (strFormatting != null) {
                 formattingOrdinal = strFormatting.ordinal();
             }
         }
 
         //formatting mark
-        stream.writeByte((byte)formattingOrdinal);
+        stream.writeByte((byte) formattingOrdinal);
 
         //JSON string
         stream.writeUTF(jsonString);
@@ -588,6 +665,9 @@ public final class JSON implements Serializable, Cloneable {
     public static class Serializer extends JsonSerializer<JSON> {
         @Override
         public void serialize(JSON json, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
+            if (jsonGenerator.getCodec() == null) {
+                jsonGenerator.setCodec(getDefaultObjectMapper());
+            }
             jsonGenerator.getCodec().writeTree(jsonGenerator, json.node());
         }
     }
@@ -595,6 +675,9 @@ public final class JSON implements Serializable, Cloneable {
     public static class Deserializer extends JsonDeserializer<JSON> {
         @Override
         public JSON deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
+            if (jsonParser.getCodec() == null) {
+                jsonParser.setCodec(getDefaultObjectMapper());
+            }
             JsonNode jsonNode = jsonParser.getCodec().readTree(jsonParser);
             return new JSON(jsonNode);
         }
@@ -603,44 +686,79 @@ public final class JSON implements Serializable, Cloneable {
 
     public interface BuilderObject<TParent> {
         BuilderObject<TParent> fieldNull(String fieldName);
+
         BuilderObject<TParent> field(String fieldName, byte v);
+
         BuilderObject<TParent> field(String fieldName, short v);
+
         BuilderObject<TParent> field(String fieldName, int v);
+
         BuilderObject<TParent> field(String fieldName, long v);
+
         BuilderObject<TParent> field(String fieldName, float v);
+
         BuilderObject<TParent> field(String fieldName, double v);
+
         BuilderObject<TParent> field(String fieldName, BigDecimal v);
+
         BuilderObject<TParent> field(String fieldName, String v);
+
         BuilderObject<TParent> field(String fieldName, boolean v);
+
         BuilderObject<TParent> field(String fieldName, byte[] data);
+
         BuilderObject<TParent> field(String fieldName, byte[] data, int offset, int length);
+
         BuilderObject<TParent> field(String fieldName, Object o);
+
         BuilderObject<TParent> field(String fieldName, TreeNode node);
+
         BuilderObject<TParent> field(String fieldName, JSON json);
+
         BuilderObject<BuilderObject<TParent>> startObject(String fieldName);
+
         BuilderArray<BuilderObject<TParent>> startArray(String fieldName);
+
         TParent endObject();
     }
 
     public interface BuilderArray<TParent> {
         BuilderArray<TParent> valueNull();
+
         BuilderArray<TParent> value(byte v);
+
         BuilderArray<TParent> value(short v);
+
         BuilderArray<TParent> value(int v);
+
         BuilderArray<TParent> value(long v);
+
         BuilderArray<TParent> value(float v);
+
         BuilderArray<TParent> value(double v);
+
         BuilderArray<TParent> value(BigInteger v);
+
         BuilderArray<TParent> value(BigDecimal v);
+
         BuilderArray<TParent> value(String v);
+
         BuilderArray<TParent> value(boolean v);
+
         BuilderArray<TParent> value(byte[] data);
+
         BuilderArray<TParent> value(byte[] data, int offset, int length);
+
         BuilderArray<TParent> value(TreeNode node);
+
         BuilderArray<TParent> value(JSON json);
+
         BuilderArray<TParent> value(Object o);
+
         BuilderObject<BuilderArray<TParent>> startObject();
+
         BuilderArray<BuilderArray<TParent>> startArray();
+
         TParent endArray();
     }
 
@@ -650,22 +768,39 @@ public final class JSON implements Serializable, Cloneable {
 
     public interface BuilderRoot {
         BuilderObject<BuilderTerminate> startObject();
+
         BuilderArray<BuilderTerminate> startArray();
+
         BuilderTerminate valueNull();
+
         BuilderTerminate value(byte v);
+
         BuilderTerminate value(short v);
+
         BuilderTerminate value(int v);
+
         BuilderTerminate value(long v);
+
         BuilderTerminate value(float v);
+
         BuilderTerminate value(double v);
+
         BuilderTerminate value(BigInteger v);
+
         BuilderTerminate value(BigDecimal v);
+
         BuilderTerminate value(String v);
+
         BuilderTerminate value(boolean v);
+
         BuilderTerminate value(byte[] data);
+
         BuilderTerminate value(byte[] data, int offset, int length);
+
         BuilderTerminate value(TreeNode node);
+
         BuilderTerminate value(JSON json);
+
         BuilderTerminate value(Object o);
     }
 
@@ -674,7 +809,7 @@ public final class JSON implements Serializable, Cloneable {
     public static final class Builder implements BuilderRoot, BuilderObject, BuilderArray, BuilderTerminate {
 
         private ByteArrayOutputStream out = new ByteArrayOutputStream();
-        private JsonGenerator generator = generator(out);
+        private JsonGenerator generator;
         private Formatting formatting;
 
         public Builder() {
@@ -682,6 +817,16 @@ public final class JSON implements Serializable, Cloneable {
         }
 
         public Builder(Formatting formatting) {
+            this(null, formatting);
+        }
+
+        public Builder(ObjectMapper objectMapper, Formatting formatting) {
+            if (objectMapper != null) {
+                generator = generator(objectMapper, out);
+            } else {
+                generator = generator(out);
+            }
+
             if (formatting == Formatting.Pretty) {
                 this.formatting = Formatting.Pretty;
                 generator.useDefaultPrettyPrinter();
@@ -1044,8 +1189,7 @@ public final class JSON implements Serializable, Cloneable {
             try {
                 if (o == null) {
                     generator.writeNull();
-                }
-                else {
+                } else {
                     generator.writeObject(o);
                 }
             } catch (IOException e) {
@@ -1115,7 +1259,8 @@ public final class JSON implements Serializable, Cloneable {
             if (generator != null) {
                 try {
                     generator.flush();
-                } catch (IOException ignore) { }
+                } catch (IOException ignore) {
+                }
             }
 
             return new String(out.toByteArray(), DEFAULT_CHARSET);
