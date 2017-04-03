@@ -1,9 +1,10 @@
 package com.sproutiyg.commons.jsonright;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.sproutigy.commons.jsonright.jackson.JSON;
 import com.sproutigy.commons.jsonright.jackson.ClassedJSON;
+import com.sproutigy.commons.jsonright.jackson.JSON;
 import org.junit.Test;
 
 import java.io.*;
@@ -27,7 +28,7 @@ public class JSONTest {
         JSON json = JSON.fromString("{\"hello\":\"world\"}");
         assertEquals("world", json.node().get("hello").asText());
         json.nodeObject().put("hello", "universe");
-        assertEquals("{\"hello\":\"universe\"}", json.toString());
+        assertEquals("{\"hello\":\"universe\"}", json.toStringCompact());
     }
 
     @Test
@@ -42,9 +43,16 @@ public class JSONTest {
     public void testSelfSerialization() throws IOException {
         String jsonString = "{\"hello\":\"world\"}";
         JSON json = JSON.fromString(jsonString);
-        assertEquals(jsonString, JSON.getObjectMapper().writeValueAsString(json));
-        json = JSON.getObjectMapper().readValue(jsonString, JSON.class);
-        assertEquals(jsonString, json.toString());
+        assertEquals(jsonString, JSON.getDefaultObjectMapper().writeValueAsString(json));
+        json = JSON.getDefaultObjectMapper().readValue(jsonString, JSON.class);
+        assertEquals(jsonString, json.toStringCompact());
+    }
+
+    @Test
+    public void testPrettyString() {
+        String jsonString = "{\"hello\":\"world\",\"whazzup\":\"okay\"}";
+        String jsonStringPretty = JSON.fromString(jsonString).toStringPretty();
+        assertEquals("{\r\n  \"hello\" : \"world\",\r\n  \"whazzup\" : \"okay\"\r\n}", jsonStringPretty);
     }
 
     @Test
@@ -71,7 +79,7 @@ public class JSONTest {
 
         String json1 = JSON.builder()
                 .startObject()
-                    .field("hello", "world")
+                .field("hello", "world")
                 .endObject()
                 .build().toString();
 
@@ -80,13 +88,12 @@ public class JSONTest {
 
         String json2 = JSON.builder()
                 .startArray()
-                    .value(true)
+                .value(true)
                 .startObject()
-                    .field("x", 5)
+                .field("x", 5)
                 .endObject()
                 .endArray()
-                .build().toString()
-                ;
+                .build().toString();
 
         assertEquals("[true,{\"x\":5}]", json2);
 
@@ -112,22 +119,22 @@ public class JSONTest {
         JSON json1 = new JSON(json1str);
 
         JSON json2 = JSON.builder().startObject().field("test", json1).endObject().build();
-        assertEquals("{\"test\":"+json1str+"}", json2.toString());
+        assertEquals("{\"test\":" + json1str + "}", json2.toString());
 
         JSON json3 = JSON.builder().startArray().value("test").value(json1).endArray().build();
-        assertEquals("[\"test\","+json1str+"]", json3.toString());
+        assertEquals("[\"test\"," + json1str + "]", json3.toString());
 
         JSON json4 = JSON.builder().startArray().value(json1).value("test").endArray().build();
-        assertEquals("["+json1str+",\"test\"]", json4.toString());
+        assertEquals("[" + json1str + ",\"test\"]", json4.toString());
 
         JSON json5 = JSON.builder().startObject().field("test", json1).field("check", true).endObject().build();
-        assertEquals("{\"test\":"+json1str+",\"check\":true}", json5.toString());
+        assertEquals("{\"test\":" + json1str + ",\"check\":true}", json5.toString());
 
     }
 
     @Test
     public void testObjectMapper() {
-        ObjectMapper objectMapper = JSON.getObjectMapper();
+        ObjectMapper objectMapper = JSON.getDefaultObjectMapper();
         Integer num = objectMapper.convertValue("42", Integer.class);
         assertEquals(42, num.intValue());
     }
@@ -190,15 +197,34 @@ public class JSONTest {
     @Test
     public void testDeserializeSimpleTypes() {
         JSON json = JSON.builder().startObject().field("hello", "world").field("counter", 1).endObject().build();
-        TextNode textNode = (TextNode)json.nodeObject().get("hello");
+        TextNode textNode = (TextNode) json.nodeObject().get("hello");
         assertEquals("world", JSON.fromNode(textNode).deserialize(String.class));
-        assertEquals(1, (int)JSON.fromNode(json.nodeObject().get("counter")).deserialize(Integer.class));
+        assertEquals(1, (int) JSON.fromNode(json.nodeObject().get("counter")).deserialize(Integer.class));
+    }
+
+    @Test
+    public void testCustomObjectMapper() {
+        TestPOJO testPOJO = new TestPOJO();
+
+        JSON json = new JSON();
+
+        json.jsonize(testPOJO);
+        assertEquals("{}", json.toStringCompact());
+
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.ALWAYS);
+        json.setLocalObjectMapper(objectMapper);
+
+        json.jsonize(testPOJO);
+        assertEquals("{\"name\":null}", json.toStringCompact());
     }
 
     public static class TestPOJO {
         String name;
 
-        public TestPOJO() { }
+        public TestPOJO() {
+        }
 
         public TestPOJO(String name) {
             this.name = name;
