@@ -177,7 +177,7 @@ public final class JSON implements Serializable, Cloneable {
         if (o == null)
             return newNull();
 
-        return new JSON(serializeToStringCompact(o));
+        return new JSON(stringify(o));
     }
 
     public static JSON primitive(byte v) {
@@ -244,7 +244,7 @@ public final class JSON implements Serializable, Cloneable {
         return builder(Formatting.Pretty);
     }
 
-    public static String serializeToStringCompact(Object o) {
+    public static String stringify(Object o) {
         if (o == null) {
             return "null";
         }
@@ -256,7 +256,7 @@ public final class JSON implements Serializable, Cloneable {
         }
     }
 
-    public static String serializeToStringPretty(Object o) {
+    public static String stringifyPretty(Object o) {
         if (o == null) {
             return "null";
         }
@@ -268,11 +268,27 @@ public final class JSON implements Serializable, Cloneable {
         }
     }
 
-    public static JsonNode serializeToNode(Object o) {
+    public static String stringify(Object o, Formatting formatting) {
         if (o == null) {
-            return nullNode();
+            return "null";
         }
-        return getDefaultObjectMapper().valueToTree(o);
+
+        return JSON.serialize(o).toString(formatting);
+    }
+
+    public static <T> T parse(String jsonString, Class<T> clazz) {
+        return parse(jsonString, clazz, null);
+    }
+
+    public static <T> T parse(String jsonString, Class<T> clazz, T defaultValue) {
+        if (jsonString == null || jsonString.isEmpty()) {
+            return null;
+        }
+        return JSON.fromString(jsonString).deserialize(clazz, defaultValue);
+    }
+
+    public static JsonNode parse(String json) {
+        return new JSON(json).node();
     }
 
     public static JsonGenerator generator(OutputStream out) {
@@ -315,8 +331,8 @@ public final class JSON implements Serializable, Cloneable {
         }
     }
 
-    public JSON jsonize(Object o) {
-        set(getObjectMapper().convertValue(o, JsonNode.class));
+    public JSON setSerializable(Object o) {
+        set(getObjectMapper().valueToTree(o));
         return this;
     }
 
@@ -477,7 +493,7 @@ public final class JSON implements Serializable, Cloneable {
 
         if (str != null) {
             try {
-                return getObjectMapper().readValue(parse(), clazz);
+                return getObjectMapper().readValue(parser(), clazz);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -543,7 +559,7 @@ public final class JSON implements Serializable, Cloneable {
         }
     }
 
-    public JsonParser parse() throws IOException {
+    public JsonParser parser() throws IOException {
         String json = str;
         if (json == null) {
             json = toStringCompact();
@@ -561,7 +577,7 @@ public final class JSON implements Serializable, Cloneable {
             }
 
             try {
-                JsonParser parser = parse();
+                JsonParser parser = parser();
                 while (parser.nextToken() != null) {
                 }
             } catch (JsonParseException jpe) {
@@ -630,7 +646,6 @@ public final class JSON implements Serializable, Cloneable {
 
         throw new IllegalArgumentException("Unsupported formatting value");
     }
-
 
     private void writeObject(ObjectOutputStream stream) throws IOException {
         int formattingOrdinal = Formatting.Unknown.ordinal();

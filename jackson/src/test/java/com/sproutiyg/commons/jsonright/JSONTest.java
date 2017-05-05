@@ -107,7 +107,7 @@ public class JSONTest {
     public void testBuilderSerialization() {
         JSON.Builder builder = new JSON.Builder().startObject().field("hello", "world").endObject();
         assertEquals("{\"hello\":\"world\"}", builder.toString());
-        String json = JSON.serializeToStringCompact(builder);
+        String json = JSON.stringify(builder);
         assertEquals("{\"hello\":\"world\"}", json);
         builder = JSON.fromString(json).deserialize(JSON.Builder.class);
         assertEquals("{\"hello\":\"world\"}", builder.build().toStringCompact());
@@ -208,7 +208,7 @@ public class JSONTest {
 
         JSON json = new JSON();
 
-        json.jsonize(testPOJO);
+        json.setSerializable(testPOJO);
         assertEquals("{}", json.toStringCompact());
 
 
@@ -216,7 +216,7 @@ public class JSONTest {
         objectMapper.setSerializationInclusion(JsonInclude.Include.ALWAYS);
         json.setLocalObjectMapper(objectMapper);
 
-        json.jsonize(testPOJO);
+        json.setSerializable(testPOJO);
         assertEquals("{\"name\":null}", json.toStringCompact());
     }
 

@@ -39,6 +39,21 @@ If you want to use different version, add this to your POM:
 
 ### Features
 
+#### JavaScript-like static methods
+
+##### JSON.stringify
+```java
+String jsonStr1 = JSON.stringify(obj);
+String jsonStr2 = JSON.stringifyPretty(obj);
+```
+
+##### JSON.parse
+```java
+String jsonStr = "{\"hello\":\"world\"}";
+JsonNode node = JSON.parse(jsonStr);
+MyClass instance = JSON.parse(jsonStr, MyClass.class);
+```
+
 #### String or parsed nodes tree
 It does not matter how you want to keep your data. JSON Right dynamically converts between string and JsonNode object when there's a need:
 ```java
