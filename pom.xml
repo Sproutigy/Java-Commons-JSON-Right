@@ -11,7 +11,7 @@
     <groupId>com.sproutigy.commons</groupId>
     <artifactId>json-right</artifactId>
     <packaging>pom</packaging>
-    <version>1.3-SNAPSHOT</version>
+    <version>1.3</version>
     <modules>
         <module>jackson</module>
     </modules>
