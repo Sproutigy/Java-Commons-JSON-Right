@@ -8,6 +8,9 @@ import com.sproutigy.commons.jsonright.jackson.JSON;
 import org.junit.Test;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -311,6 +314,18 @@ public class JSONTest {
         TextNode textNode = (TextNode) json.nodeObject().get("hello");
         assertEquals("world", JSON.fromNode(textNode).deserialize(String.class));
         assertEquals(1, (int) JSON.fromNode(json.nodeObject().get("counter")).deserialize(Integer.class));
+    }
+
+    @Test
+    public void testExtendedGenerics() {
+        JSON json = JSON.builder().startArray()
+                .value("first")
+                .value("second")
+                .endArray()
+                .build();
+
+        List list = json.get(ArrayList.class, Collections.emptyList());
+        assertEquals(2, list.size());
     }
 
     @Test

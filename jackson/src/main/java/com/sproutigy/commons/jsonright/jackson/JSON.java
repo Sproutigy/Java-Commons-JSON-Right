@@ -277,11 +277,11 @@ public final class JSON implements Serializable, Cloneable {
         return JSON.serialize(o).toString(formatting);
     }
 
-    public static <T> T parse(String jsonString, Class<T> clazz) {
+    public static <T> T parse(String jsonString, Class<? extends T> clazz) {
         return parse(jsonString, clazz, null);
     }
 
-    public static <T> T parse(String jsonString, Class<T> clazz, T defaultValue) {
+    public static <T> T parse(String jsonString, Class<? extends T> clazz, T defaultValue) {
         if (jsonString == null || jsonString.isEmpty()) {
             return null;
         }
@@ -340,7 +340,7 @@ public final class JSON implements Serializable, Cloneable {
         return resolvePath(node(), path, false, null);
     }
 
-    public <T> T get(String path, Class<T> clazz) {
+    public <T> T get(String path, Class<? extends T> clazz) {
         JsonNode node = get(path);
         try {
             if (node == null) {
@@ -359,11 +359,11 @@ public final class JSON implements Serializable, Cloneable {
             throw new NullPointerException("defaultValue == null");
         }
 
-        Class<T> clazz = (Class<T>)defaultValue.getClass();
+        Class<? extends T> clazz = (Class<? extends T>)defaultValue.getClass();
         return get(path, clazz, defaultValue);
     }
 
-    public <T> T get(String path, Class<T> clazz, T defaultValue) {
+    public <T> T get(String path, Class<? extends T> clazz, T defaultValue) {
         T value = get(path, clazz);
         if (value == null) {
             return defaultValue;
@@ -626,11 +626,11 @@ public final class JSON implements Serializable, Cloneable {
         return node();
     }
 
-    public <T> T get(Class<T> clazz) {
+    public <T> T get(Class<? extends T> clazz) {
         return deserialize(clazz);
     }
 
-    public <T> T get(Class<T> clazz, T defaultValue) {
+    public <T> T get(Class<? extends T> clazz, T defaultValue) {
         return deserialize(clazz, defaultValue);
     }
 
@@ -688,7 +688,7 @@ public final class JSON implements Serializable, Cloneable {
         }
     }
 
-    public <T> T deserialize(Class<T> clazz) {
+    public <T> T deserialize(Class<? extends T> clazz) {
         if (clazz == null) {
             throw new NullPointerException("clazz == null");
         }
@@ -719,10 +719,10 @@ public final class JSON implements Serializable, Cloneable {
         if (defaultValue == null) {
             throw new NullPointerException("defaultValue == null");
         }
-        return deserialize((Class<T>) defaultValue.getClass(), defaultValue);
+        return deserialize((Class<? extends T>) defaultValue.getClass(), defaultValue);
     }
 
-    public <T> T deserialize(Class<T> clazz, T defaultValue) {
+    public <T> T deserialize(Class<? extends T> clazz, T defaultValue) {
         T o = deserialize(clazz);
         if (o == null) {
             return defaultValue;
