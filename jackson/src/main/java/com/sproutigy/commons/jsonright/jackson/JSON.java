@@ -29,6 +29,7 @@ public final class JSON implements Serializable, Cloneable {
     public static final String CONTENT_TYPE_WITH_DEFAULT_ENCODING = MIME_TYPE + "; charset=" + DEFAULT_ENCODING.toLowerCase();
 
     private static ObjectMapper DEFAULT_OBJECT_MAPPER = null;
+    private static final Object REMOVAL_MARK = new Object();
 
     private ObjectMapper localObjectMapper;
     private String str;
@@ -331,9 +332,202 @@ public final class JSON implements Serializable, Cloneable {
         }
     }
 
-    public JSON setSerializable(Object o) {
-        set(getObjectMapper().valueToTree(o));
+    public JsonNode get(String path) {
+        if (path == null || path.isEmpty()) {
+            return get();
+        }
+
+        return resolvePath(node(), path, false, null);
+    }
+
+    public <T> T get(String path, Class<T> clazz) {
+        JsonNode node = get(path);
+        try {
+            if (node == null) {
+                return null;
+            } else {
+                return getObjectMapper().treeToValue(node, clazz);
+            }
+        } catch (JsonProcessingException e) {
+            return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T get(String path, T defaultValue) {
+        if (defaultValue == null) {
+            throw new NullPointerException("defaultValue == null");
+        }
+
+        Class<T> clazz = (Class<T>)defaultValue.getClass();
+        return get(path, clazz, defaultValue);
+    }
+
+    public <T> T get(String path, Class<T> clazz, T defaultValue) {
+        T value = get(path, clazz);
+        if (value == null) {
+            return defaultValue;
+        }
+        return value;
+    }
+
+    public JSON set(String path, Object value) {
+        if (path == null || path.isEmpty()) {
+            return set(value);
+        }
+
+        if (path.charAt(0) == '[') {
+            if (!isArray()) {
+                setRaw(newArrayNode());
+            }
+        }
+        else if (!isObject()) {
+            setRaw(newObjectNode());
+        }
+
+        resolvePath(node(), path, true, value);
         return this;
+    }
+
+    public JSON set(Object value) {
+        return setRaw(convertToNode(value));
+    }
+
+    public JSON remove(String path) {
+        resolvePath(node(), path, true, REMOVAL_MARK);
+        return this;
+    }
+
+    private JsonNode resolvePath(JsonNode node, String path, boolean apply, Object value) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        if (path == null || path.isEmpty()) {
+            return node;
+        }
+        if (path.startsWith(".") || path.endsWith(".") || path.startsWith("]") || path.endsWith("[")) {
+            throw new IllegalArgumentException("Malformed JSON path");
+        }
+
+        JsonNode result = null;
+        int nextDot = path.indexOf('.', 1);
+        int nextIndexer = path.indexOf('[', 1);
+        int next;
+        if (nextDot != -1 && nextIndexer != -1) {
+            next = Math.min(nextDot, nextIndexer);
+        } else if (nextDot != -1) {
+            next = nextDot;
+        } else {
+            next = nextIndexer;
+        }
+
+        boolean isObject = (next > -1 && next == nextDot);
+        boolean isArray = (next > -1 && next == nextIndexer);
+        boolean isTarget = (next == -1);
+
+        if (next == -1) {
+            next = path.length();
+        }
+
+        if (path.charAt(0) == '[') {
+            next = path.indexOf(']', 1) + 1;
+            if (next == 0) {
+                throw new IllegalArgumentException("Malformed JSON path");
+            }
+            String indexer = path.substring(1, next - 1);
+            isTarget = (next == path.length());
+
+            try {
+                int arrayIndex;
+                if (indexer.isEmpty()) {
+                    arrayIndex = node.size();
+                } else {
+                    arrayIndex = Integer.parseInt(indexer);
+                }
+
+                if (node.isArray()) {
+                    if (apply) {
+                        if (value == REMOVAL_MARK) {
+                            ((ArrayNode) node).remove(arrayIndex);
+                        } else {
+                            while (node.size() < arrayIndex) {
+                                ((ArrayNode) node).add(JSON.nullNode());
+                            }
+                            if (isTarget) {
+                                result = convertToNode(value);
+                            } else if (isObject) {
+                                result = node.get(arrayIndex);
+                                if (result == null || !result.isObject()) {
+                                    result = newObjectNode();
+                                }
+                            } else if (isArray) {
+                                result = node.get(arrayIndex);
+                                if (result == null || !result.isArray()) {
+                                    result = newArrayNode();
+                                }
+                            }
+                            if (node.size() == arrayIndex) {
+                                ((ArrayNode) node).add(result);
+                            } else {
+                                ((ArrayNode) node).set(arrayIndex, result);
+                            }
+                        }
+                    } else {
+                        if (node.size() >= arrayIndex) {
+                            result = node.get(arrayIndex);
+                        }
+                    }
+                }
+            } catch (NumberFormatException notInteger) {
+                throw new IllegalArgumentException("Malformed JSON path");
+            }
+        } else {
+            String fieldName = path.substring(0, next);
+            if (node.isObject()) {
+                result = node.get(fieldName);
+                if (result == null && apply) {
+                    if (isObject) {
+                        result = JSON.newObjectNode();
+                    } else if (isArray) {
+                        result = JSON.newArrayNode();
+                    }
+                    if (result != REMOVAL_MARK) {
+                        ((ObjectNode) node).set(fieldName, result);
+                    }
+                }
+
+                if (isTarget && apply) {
+                    if (value == REMOVAL_MARK) {
+                        ((ObjectNode) node).remove(fieldName);
+                    } else {
+                        result = convertToNode(value);
+                        ((ObjectNode) node).set(fieldName, result);
+                    }
+                }
+            } else {
+                throw new IllegalStateException("Cannot change type of a root node");
+            }
+        }
+
+        if (next == nextDot) {
+            next++;
+        }
+
+        if (!isTarget) {
+            return resolvePath(result, path.substring(next), apply, value);
+        }
+
+        return result;
+    }
+
+    private JsonNode convertToNode(Object value) {
+        if (value == null) {
+            return nullNode();
+        }
+        if (value instanceof JsonNode) {
+            return (JsonNode)value;
+        }
+        return getObjectMapper().valueToTree(value);
     }
 
     @Override
@@ -416,11 +610,11 @@ public final class JSON implements Serializable, Cloneable {
         }
     }
 
-    public JSON set(String json) {
-        return set(json, Formatting.Unknown);
+    public JSON setRaw(String json) {
+        return setRaw(json, Formatting.Unknown);
     }
 
-    public JSON set(String json, Formatting formatting) {
+    public JSON setRaw(String json, Formatting formatting) {
         clear();
 
         this.str = json;
@@ -428,18 +622,30 @@ public final class JSON implements Serializable, Cloneable {
         return this;
     }
 
-    public JSON set(JsonNode json) {
+    public JsonNode get() {
+        return node();
+    }
+
+    public <T> T get(Class<T> clazz) {
+        return deserialize(clazz);
+    }
+
+    public <T> T get(Class<T> clazz, T defaultValue) {
+        return deserialize(clazz, defaultValue);
+    }
+
+    public JSON setRaw(JsonNode json) {
         clear();
 
         this.node = json;
         return this;
     }
 
-    public JSON set(JSON other) {
-        return set(other, true);
+    public JSON setRaw(JSON other) {
+        return setRaw(other, true);
     }
 
-    public JSON set(JSON other, boolean deepCopy) {
+    public JSON setRaw(JSON other, boolean deepCopy) {
         clear();
 
         if (other.str != null) {

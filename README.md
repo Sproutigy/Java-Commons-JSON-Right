@@ -54,6 +54,39 @@ JsonNode node = JSON.parse(jsonStr);
 MyClass instance = JSON.parse(jsonStr, MyClass.class);
 ```
 
+#### JavaScript-like accessors
+JSON supports accessing objects, arrays and values by path. Use dot character: `.` to access object's internals and brackets: `[0]` to specify array index. Use empty brackets `[]` to append value to an array.    
+
+```java
+String jsonStr = "{\"name\":\"John\"}";
+JSON json = new JSON(jsonStr);
+
+//fetch value
+String name = json.get("name", ""); //empty string as a default value
+
+//modify
+json.set("name", "Josh"); //changes field value
+
+//add new values and nodes
+json.set("age", 27); //puts numeric field
+json.set("address.city", "Cansas City"); //creates node "address" and puts field "city"
+
+//remove values and nodes
+json.remove("age"); //removes field
+json.remove("address"); //removes node
+
+//create, append to and remove from arrays
+json.set("interests[0]", "sport"); //creates new array and adds a value
+json.set("interests[1]", "jazz"); //sets value to existing array on specified index
+json.set("interests[]", "bicycle"); //appends value to existing array at the end of it
+json.remove("interests[1]"); //removes value from array, shortens the array
+
+//serialize/deserialize any classes
+MyObj instance1 = json.get("data", MyObj.class); //may be null when not defined
+MyObj instance2 = json.get("data", new MyObj()); //will be default when not defined
+json.set("data", new MyObj()); //serializes object
+```
+
 #### String or parsed nodes tree
 It does not matter how you want to keep your data. JSON Right dynamically converts between string and JsonNode object when there's a need:
 ```java
@@ -71,16 +104,35 @@ System.out.println(json.toStringPretty());
 
 
 #### New JSON creation
+##### Object
 ```java
 JSON jsonObj = JSON.newObject();
 jsonObj.nodeObject().set("version", 1);
-
-JSON jsonArr = JSON.newArray();
-jsonArr.nodeArray().add("first");
-
-JSON jsonPrimitive = JSON.primitive(42);
+```
+or just:
+```java
+new JSON().set("version", 1);
 ```
 
+##### Array
+```java
+JSON jsonArr = JSON.newArray();
+jsonArr.nodeArray().add("first");
+jsonArr.nodeArray().add("second");
+```
+or just:
+```java
+new JSON().set("[]", "first").set("[]", "second");
+```
+
+##### Primitives
+```java
+JSON jsonPrimitive = JSON.primitive(42);
+```
+or just:
+```java
+new JSON().set(42); 
+```
 
 #### Validation
 JSON Right supports validation to boolean value:

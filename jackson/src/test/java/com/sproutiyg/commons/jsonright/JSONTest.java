@@ -14,6 +14,118 @@ import static org.junit.Assert.*;
 public class JSONTest {
 
     @Test
+    public void testAccessors() {
+        JSON json = JSON.builder()
+            .startObject()
+                .field("name", "John")
+                .field("age", 25)
+                .startArray("knows")
+                    .value("Java")
+                    .value("C++")
+                .endArray()
+                .startObject("address")
+                    .field("city", "New York")
+                .endObject()
+            .endObject()
+        .build();
+
+        String name = json.get("name", "");
+        assertEquals("John", name);
+
+        int age = json.get("age", 0);
+        assertEquals(25, age);
+
+        String city = json.get("address.city", "");
+        assertEquals("New York", city);
+
+        String knowsBest = json.get("knows[0]", "");
+        assertEquals("Java", knowsBest);
+
+        json.set("age", 26);
+        assertEquals(26, json.nodeObject().get("age").asInt());
+
+        json.set("address.city", "Boston");
+        assertEquals("Boston", json.nodeObject().get("address").get("city").asText());
+
+        json.set("family.mother", "Julie");
+        assertEquals("Julie", json.nodeObject().get("family").get("mother").asText());
+
+        json.remove("age");
+        assertFalse(json.nodeObject().has("age"));
+
+        json.remove("address");
+        assertFalse(json.nodeObject().has("address"));
+
+        json.remove("knows[0]");
+        assertEquals(1, json.nodeObject().get("knows").size());
+        assertEquals("C++", json.nodeObject().get("knows").get(0).asText());
+
+        json.set("interests[0]", "sport");
+        json.set("interests[1]", "jazz");
+        json.set("interests[1]", "hiphop");
+        json.set("interests[]", "bicycle");
+        assertEquals(3, json.nodeObject().get("interests").size());
+        assertEquals("sport", json.nodeObject().get("interests").get(0).asText());
+        assertEquals("hiphop", json.nodeObject().get("interests").get(1).asText());
+        assertEquals("bicycle", json.nodeObject().get("interests").get(2).asText());
+    }
+
+    @Test
+    public void testAccessorsMultiDimensionalArray() {
+        JSON json = new JSON();
+
+        json.set("playboard[0][0]", "O");
+        json.set("playboard[0][1]", "O");
+        json.set("playboard[0][2]", "O");
+        json.set("playboard[1][0]", null);
+        json.set("playboard[1][1]", "X");
+        json.set("playboard[1][2]", null);
+        json.set("playboard[2][0]", "X");
+        json.set("playboard[2][1]", null);
+        json.set("playboard[2][2]", "X");
+        assertEquals(3, json.nodeObject().get("playboard").size());
+        assertEquals(3, json.nodeObject().get("playboard").get(0).size());
+        assertEquals(3, json.nodeObject().get("playboard").get(1).size());
+        assertEquals(3, json.nodeObject().get("playboard").get(2).size());
+        assertEquals("O", json.nodeObject().get("playboard").get(0).get(0).asText());
+        assertEquals("O", json.nodeObject().get("playboard").get(0).get(1).asText());
+        assertEquals("O", json.nodeObject().get("playboard").get(0).get(2).asText());
+        assertTrue(json.nodeObject().get("playboard").get(1).get(0).isNull());
+        assertEquals("X", json.nodeObject().get("playboard").get(1).get(1).asText());
+        assertTrue(json.nodeObject().get("playboard").get(1).get(2).isNull());
+        assertEquals("X", json.nodeObject().get("playboard").get(2).get(0).asText());
+        assertTrue(json.nodeObject().get("playboard").get(2).get(1).isNull());
+        assertEquals("X", json.nodeObject().get("playboard").get(2).get(2).asText());
+    }
+
+    @Test
+    public void testAccessorsPrimitives() {
+        JSON json = new JSON();
+
+        json.set("hello");
+        assertEquals("hello", json.get(String.class));
+        assertTrue(json.node().isTextual());
+
+        json.set(123);
+        assertEquals(123, (int)json.get(Integer.class));
+        assertTrue(json.node().isInt());
+
+        json.set(null);
+        assertTrue(json.get().isNull());
+    }
+
+    @Test
+    public void testAccessorsArray() {
+        JSON json = new JSON();
+        json.set("[]", "first");
+        json.set("[]", "second");
+        assertTrue(json.isArray());
+        assertEquals(2, json.nodeArray().size());
+        assertEquals("first", json.nodeArray().get(0).asText());
+        assertEquals("second", json.nodeArray().get(1).asText());
+    }
+
+    @Test
     public void testEncodingDetection() throws UnsupportedEncodingException {
         String json = "{\"hello\":\"world\"}";
         assertEquals(json, new JSON(json.getBytes("UTF-8")).toString());
@@ -129,7 +241,6 @@ public class JSONTest {
 
         JSON json5 = JSON.builder().startObject().field("test", json1).field("check", true).endObject().build();
         assertEquals("{\"test\":" + json1str + ",\"check\":true}", json5.toString());
-
     }
 
     @Test
@@ -208,7 +319,7 @@ public class JSONTest {
 
         JSON json = new JSON();
 
-        json.setSerializable(testPOJO);
+        json.set(testPOJO);
         assertEquals("{}", json.toStringCompact());
 
 
@@ -216,7 +327,7 @@ public class JSONTest {
         objectMapper.setSerializationInclusion(JsonInclude.Include.ALWAYS);
         json.setLocalObjectMapper(objectMapper);
 
-        json.setSerializable(testPOJO);
+        json.set(testPOJO);
         assertEquals("{\"name\":null}", json.toStringCompact());
     }
 
