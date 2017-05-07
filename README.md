@@ -80,6 +80,9 @@ json.set("interests[0]", "sport"); //creates new array and adds a value
 json.set("interests[1]", "jazz"); //sets value to existing array on specified index
 json.set("interests[]", "bicycle"); //appends value to existing array at the end of it
 json.remove("interests[1]"); //removes value from array, shortens the array
+json.remove("interests[]", "sport") //removes by value
+boolean likesSport = json.has("interests", "sport"); //checks whether array contains specific value
+int idx = json.indexOf("interests", "bicycle"); //
 
 //serialize/deserialize any classes
 MyObj instance1 = json.get("data", MyObj.class); //may be null when not defined

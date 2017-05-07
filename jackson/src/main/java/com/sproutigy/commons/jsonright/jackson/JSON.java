@@ -17,6 +17,7 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
+import java.util.Iterator;
 
 
 @JsonSerialize(using = JSON.Serializer.class)
@@ -29,7 +30,10 @@ public final class JSON implements Serializable, Cloneable {
     public static final String CONTENT_TYPE_WITH_DEFAULT_ENCODING = MIME_TYPE + "; charset=" + DEFAULT_ENCODING.toLowerCase();
 
     private static ObjectMapper DEFAULT_OBJECT_MAPPER = null;
-    private static final Object REMOVAL_MARK = new Object();
+
+    private enum Operation {
+        GET, SET, REMOVE
+    }
 
     private ObjectMapper localObjectMapper;
     private String str;
@@ -337,7 +341,7 @@ public final class JSON implements Serializable, Cloneable {
             return get();
         }
 
-        return resolvePath(node(), path, false, null);
+        return resolvePath(node(), path, Operation.GET, null);
     }
 
     public <T> T get(String path, Class<? extends T> clazz) {
@@ -371,6 +375,56 @@ public final class JSON implements Serializable, Cloneable {
         return value;
     }
 
+    public boolean has(String path) {
+        JsonNode node = get(path);
+        return (node != null && !node.isNull());
+    }
+
+    public boolean has(String path, Object value) {
+        if (value == null) {
+            throw new NullPointerException("value == null");
+        }
+        JsonNode valueNode = convertToNode(value);
+        JsonNode n = get(path);
+
+        if (n != null) {
+            if (n.isArray()) {
+                for (int i = 0; i < n.size(); i++) {
+                    JsonNode arrayItemNode = n.get(i);
+                    if (valueNode.equals(arrayItemNode)) {
+                        return true;
+                    }
+                }
+            } else if (n.isObject()) {
+                return n.has(value.toString());
+            } else {
+                return valueNode.equals(n);
+            }
+        }
+        return false;
+    }
+
+    public int indexOf(String path, Object value) {
+        JsonNode node = get(path);
+        if (node != null) {
+            if (node.isArray()) {
+                return findIndexOf((ArrayNode) node, value);
+            }
+            if (node.isObject()) {
+                int i = 0;
+                Iterator<String> fieldNamesIterator = node.fieldNames();
+                while (fieldNamesIterator.hasNext()) {
+                    String fieldName = fieldNamesIterator.next();
+                    if (value.toString().equals(fieldName)) {
+                        return i;
+                    }
+                    i++;
+                }
+            }
+        }
+        return -1;
+    }
+
     public JSON set(String path, Object value) {
         if (path == null || path.isEmpty()) {
             return set(value);
@@ -385,7 +439,7 @@ public final class JSON implements Serializable, Cloneable {
             setRaw(newObjectNode());
         }
 
-        resolvePath(node(), path, true, value);
+        resolvePath(node(), path, Operation.SET, value);
         return this;
     }
 
@@ -394,11 +448,15 @@ public final class JSON implements Serializable, Cloneable {
     }
 
     public JSON remove(String path) {
-        resolvePath(node(), path, true, REMOVAL_MARK);
+        return remove(path, null);
+    }
+
+    public JSON remove(String path, Object value) {
+        resolvePath(node(), path, Operation.REMOVE, value);
         return this;
     }
 
-    private JsonNode resolvePath(JsonNode node, String path, boolean apply, Object value) {
+    private JsonNode resolvePath(JsonNode node, String path, Operation operation, Object value) {
         if (node == null || node.isNull()) {
             return null;
         }
@@ -446,9 +504,23 @@ public final class JSON implements Serializable, Cloneable {
                 }
 
                 if (node.isArray()) {
-                    if (apply) {
-                        if (value == REMOVAL_MARK) {
-                            ((ArrayNode) node).remove(arrayIndex);
+                    if (operation != Operation.GET) {
+                        if (operation == Operation.REMOVE) {
+                            boolean remove = true;
+                            if (value != null) {
+                                JsonNode valueNode = convertToNode(value);
+                                if (indexer.isEmpty()) {
+                                    arrayIndex = findIndexOf((ArrayNode)node, value);
+                                    remove = arrayIndex != -1;
+                                } else {
+                                    JsonNode arrayItemNode = node.get(arrayIndex);
+                                    remove = valueNode.equals(arrayItemNode);
+                                }
+                            }
+
+                            if (remove) {
+                                ((ArrayNode) node).remove(arrayIndex);
+                            }
                         } else {
                             while (node.size() < arrayIndex) {
                                 ((ArrayNode) node).add(JSON.nullNode());
@@ -485,20 +557,29 @@ public final class JSON implements Serializable, Cloneable {
             String fieldName = path.substring(0, next);
             if (node.isObject()) {
                 result = node.get(fieldName);
-                if (result == null && apply) {
+                if (result == null && operation != Operation.GET) {
                     if (isObject) {
                         result = JSON.newObjectNode();
                     } else if (isArray) {
                         result = JSON.newArrayNode();
                     }
-                    if (result != REMOVAL_MARK) {
+                    if (operation != Operation.REMOVE) {
                         ((ObjectNode) node).set(fieldName, result);
                     }
                 }
 
-                if (isTarget && apply) {
-                    if (value == REMOVAL_MARK) {
-                        ((ObjectNode) node).remove(fieldName);
+                if (isTarget && operation != Operation.GET) {
+                    if (operation == Operation.REMOVE) {
+                        boolean remove = true;
+                        if (value != null) {
+                            JsonNode valueNode = convertToNode(value);
+                            JsonNode objectFieldNode = node.get(fieldName);
+                            remove = valueNode.equals(objectFieldNode);
+                        }
+                        if (remove) {
+                            ((ObjectNode) node).remove(fieldName);
+                        }
+                        result = node;
                     } else {
                         result = convertToNode(value);
                         ((ObjectNode) node).set(fieldName, result);
@@ -514,7 +595,7 @@ public final class JSON implements Serializable, Cloneable {
         }
 
         if (!isTarget) {
-            return resolvePath(result, path.substring(next), apply, value);
+            return resolvePath(result, path.substring(next), operation, value);
         }
 
         return result;
@@ -526,6 +607,9 @@ public final class JSON implements Serializable, Cloneable {
         }
         if (value instanceof JsonNode) {
             return (JsonNode)value;
+        }
+        if (value instanceof JSON) {
+            return ((JSON) value).node();
         }
         return getObjectMapper().valueToTree(value);
     }
@@ -851,6 +935,18 @@ public final class JSON implements Serializable, Cloneable {
         }
 
         throw new IllegalArgumentException("Unsupported formatting value");
+    }
+
+
+    private int findIndexOf(ArrayNode arrayNode, Object value) {
+        JsonNode valueNode = convertToNode(value);
+        for (int i = 0; i < arrayNode.size(); i++) {
+            JsonNode arrayItemNode = arrayNode.get(i);
+            if (valueNode.equals(arrayItemNode)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private void writeObject(ObjectOutputStream stream) throws IOException {

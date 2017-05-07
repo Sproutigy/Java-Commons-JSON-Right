@@ -129,6 +129,58 @@ public class JSONTest {
     }
 
     @Test
+    public void testAccessorRemoveByValueInArray() {
+        JSON json = new JSON();
+        json.set("array[]", "first");
+        json.set("array[]", "zero");
+        json.set("array[]", "second");
+        json.remove("array[]", "zero");
+        json.remove("array[]", "nonexisting");
+
+        assertEquals(2, json.get("array").size());
+
+        assertEquals("first", json.get("array[0]", ""));
+        assertEquals("second", json.get("array[1]", ""));
+
+        assertTrue(json.has("array", "first"));
+        assertFalse(json.has("array", "zero"));
+        assertTrue(json.has("array", "second"));
+
+        assertEquals(0, json.indexOf("array", "first"));
+        assertEquals(-1, json.indexOf("array", "zero"));
+        assertEquals(1, json.indexOf("array", "seconds"));
+    }
+
+    @Test
+    public void testAccessorRemoveByValueInObject() {
+        JSON json = new JSON();
+        json.set("obj.a", 1);
+        json.set("obj.b", 2);
+        json.set("obj.c", 3);
+        json.remove("obj.a", 0);
+        json.remove("obj.b", 2);
+        json.remove("obj.c", 4);
+
+        assertEquals(2, json.get("obj").size());
+
+        assertTrue(json.get("obj").has("a"));
+        assertFalse(json.get("obj").has("b"));
+        assertTrue(json.get("obj").has("c"));
+
+        assertEquals(1, (int)json.get("obj.a", 0));
+        assertEquals(0, (int)json.get("obj.b", 0));
+        assertEquals(3, (int)json.get("obj.c", 0));
+
+        assertTrue(json.has("obj", "a"));
+        assertFalse(json.has("obj", "b"));
+        assertTrue(json.has("obj", "c"));
+
+        assertEquals(0, json.indexOf("obj", "a"));
+        assertEquals(-1, json.indexOf("obj", "b"));
+        assertEquals(1, json.indexOf("obj", "c"));
+    }
+
+    @Test
     public void testEncodingDetection() throws UnsupportedEncodingException {
         String json = "{\"hello\":\"world\"}";
         assertEquals(json, new JSON(json.getBytes("UTF-8")).toString());
