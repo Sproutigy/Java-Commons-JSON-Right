@@ -148,7 +148,7 @@ public class JSONTest {
 
         assertEquals(0, json.indexOf("array", "first"));
         assertEquals(-1, json.indexOf("array", "zero"));
-        assertEquals(1, json.indexOf("array", "seconds"));
+        assertEquals(1, json.indexOf("array", "second"));
     }
 
     @Test
